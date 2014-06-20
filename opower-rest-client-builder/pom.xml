@@ -103,11 +103,38 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.17</version>
                 <configuration>
                     <additionalClasspathElements>
                         <additionalClasspathElement>${settings.localRepository}/javax/ws/rs/jsr311-api/1.1.1/jsr311-api-1.1.1.jar</additionalClasspathElement>
                     </additionalClasspathElements>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>metrics-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                    <include>**/*</include>
+                            </includes>
+                            <skipTests>false</skipTests>
+                            <classpathDependencyExcludes>
+                                <classpathDependencyExcludes>javax.ws.rs:jsr311-api</classpathDependencyExcludes>
+                                <classpathDependencyExcludes>javax.ws.rs:javax.ws.rs-api</classpathDependencyExcludes>
+                            </classpathDependencyExcludes>
+                            <additionalClasspathElements>
+                                <additionalClasspathElement>${settings.localRepository}/com/sun/jersey/jersey-core/1.17.1/jersey-core-1.17.1.jar</additionalClasspathElement>
+                                <additionalClasspathElement>${settings.localRepository}/com/sun/jersey/jersey-server/1.17.1/jersey-server-1.17.1.jar</additionalClasspathElement>
+                                <additionalClasspathElement>${settings.localRepository}/com/sun/jersey/jersey-servlet/1.17.1/jersey-servlet-1.17.1.jar</additionalClasspathElement>
+                            </additionalClasspathElements>
+                            <test>com.opower.rest.test.Codahale3MetricsIntegrationTesting</test>
+                            <reuseForks>false</reuseForks>
+                        </configuration>
+                            
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

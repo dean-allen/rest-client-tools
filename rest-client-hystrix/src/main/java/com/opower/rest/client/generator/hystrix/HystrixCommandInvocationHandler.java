@@ -1,10 +1,7 @@
 package com.opower.rest.client.generator.hystrix;
 
-import com.google.common.base.Throwables;
 import com.netflix.hystrix.HystrixCommand;
-import com.netflix.hystrix.HystrixCommand.Setter;
 import com.netflix.hystrix.exception.HystrixRuntimeException;
-import com.opower.rest.client.generator.core.ResourceInterface;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -19,18 +16,18 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * InvocationHandler that proxies method calls in a HystrixCommand execution.
  *
- * @author chris.phillips
  * @param <T> The type of the Resource
+ * @author chris.phillips
  */
-public final class HystrixCommandInvocationHandler<T> implements InvocationHandler {
+final class HystrixCommandInvocationHandler<T> implements InvocationHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(HystrixCommandInvocationHandler.class);
     private final T target;
-    private final Map<Method, Setter> commandSetters;
+    private final Map<Method, HystrixCommand.Setter> commandSetters;
     private final Map<Method, Callable<?>> fallbacks;
 
     private HystrixCommandInvocationHandler(T target,
-                                            final Map<Method, Setter> commandSetters,
+                                            final Map<Method, HystrixCommand.Setter> commandSetters,
                                             final Map<Method, Callable<?>> fallbacks) {
         this.target = checkNotNull(target);
         this.commandSetters = checkNotNull(commandSetters);
@@ -40,71 +37,73 @@ public final class HystrixCommandInvocationHandler<T> implements InvocationHandl
     /**
      * All methods will be wrapped in a HystrixCommand set up according to the provided Map of HystrixCommand.Setter.
      *
-     * @param resourceInterface  the interface that has methods annotated for JAX-RS resource purposes
-     * @param toProxy        the actual resource instance to generator
-     * @param commandSetters should you desire to have different configuration for the HystrixCommands per method,
-     *                       you can pass that mapping here directly.
-     * @param fallbacks The fallbacks to use
-     * @param <T>            the type of the resource interface
+     * @param resourceInterface the interface that has methods annotated for JAX-RS resource purposes
+     * @param toProxy           the actual resource instance to proxy
+     * @param commandSetters    should you desire to have different configuration for the HystrixCommands per method,
+     *                          you can pass that mapping here directly.
+     * @param fallbacks         The fallbacks to use
+     * @param <T>               the type of the resource interface
      * @return a archmage that wraps calls to the underlying resource instance with metrics tracking logic
      */
     @SuppressWarnings("unchecked")
-    public static <T> T proxy(ResourceInterface<T> resourceInterface,
-                              T toProxy,
-                              Map<Method, Setter> commandSetters,
-                              Map<Method, Callable<?>> fallbacks) {
+    static <T> T proxy(Class<T> resourceInterface,
+                       T toProxy,
+                       Map<Method, HystrixCommand.Setter> commandSetters,
+                       Map<Method, Callable<?>> fallbacks) {
         LOG.info("Creating Hystrix based client");
         return (T) Proxy.newProxyInstance(
                 toProxy.getClass().getClassLoader(),
-                new Class<?>[]{resourceInterface.getInterface()},
+                new Class<?>[]{resourceInterface},
                 new HystrixCommandInvocationHandler<>(toProxy, commandSetters, fallbacks));
     }
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        if (this.commandSetters.containsKey(method)) {
+            ProxyCommand command = new ProxyCommand(this.commandSetters.get(method), method, args,
+                                                    (Callable<Object>) this.fallbacks.get(method), this.target);
+            return execute(command);
+        } else {
+            return method.invoke(this.target, args);
+        }
+
+    }
+
+    /**
+     * Executes the command synchronously and throws HystrixRuntimeExceptions for all but cases where there is no fallback
+     * configured and a non-hystrix related exception is thrown by the underlying work. Visible for testing
+     *
+     * @param command the HystrixCommand to execute
+     * @return the result of the HystrixCommand
+     * @throws Throwable for convenience
+     */
+    static Object execute(HystrixCommand command) throws Throwable {
         try {
-            if (this.commandSetters.containsKey(method)) {
-                return new ProxyCommand(this.commandSetters.get(method), method, args).execute();
-            } else {
-                return method.invoke(this.target, args);
-            }
+            return command.execute();
         } catch (HystrixRuntimeException ex) {
-            Throwable t = ex.getCause();
-            if (t instanceof InvocationTargetException) {
-                throw ((InvocationTargetException) t).getTargetException();
-            } else {
-                throw t;
+            // fallback failures should always just throw the HystrixRuntimeException
+            if (ex.getFallbackException() != null) {
+                throw ex;
+            }
+            switch (ex.getFailureType()) {
+                case COMMAND_EXCEPTION:
+                    throw throwCause(ex);
+                default:
+                    throw ex;
             }
         }
     }
 
-    private final class ProxyCommand extends HystrixCommand {
-
-        private final Method toinvoke;
-        private final Object[] args;
-
-        private ProxyCommand(Setter setter, Method toinvoke, Object[] args) {
-            super(setter);
-            this.toinvoke = toinvoke;
-            this.args = args;
-        }
-
-        @Override
-        protected Object run() throws Exception {
-            return this.toinvoke.invoke(HystrixCommandInvocationHandler.this.target, this.args);
-        }
-
-        @Override
-        protected Object getFallback() {
-
-            if (HystrixCommandInvocationHandler.this.fallbacks.containsKey(this.toinvoke)) {
-                try {
-                    return HystrixCommandInvocationHandler.this.fallbacks.get(this.toinvoke).call();
-                } catch (Exception e) {
-                    Throwables.propagate(e);
-                }
+    private static Throwable throwCause(HystrixRuntimeException ex) {
+        Throwable cause = ex.getCause();
+        if (cause != null) {
+            if (cause instanceof InvocationTargetException) {
+                return ((InvocationTargetException) cause).getTargetException();
+            } else {
+                return cause;
             }
-            return super.getFallback();
+        } else {
+            return ex;
         }
     }
 }

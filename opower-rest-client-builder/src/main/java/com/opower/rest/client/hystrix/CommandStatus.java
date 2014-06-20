@@ -58,13 +58,11 @@ public final class CommandStatus {
     public String getMessage() {
         switch (this.status) {
             case ok:
-                return String.format("%s.%s has resumed normal operations.",
-                                     this.clientName,
-                                     this.hystrixCommandKey.name());
+                return String.format("The client with id [%s] for command [%s] has resumed normal operations.",
+                                     this.clientName, this.hystrixCommandKey.name());
             case critical:
-                return String.format("The circuit breaker for %s.%s has tripped. Please investigate.",
-                                     this.clientName,
-                                     this.hystrixCommandKey.name());
+                return String.format("The client with id [%s] for command [%s] has a tripped circuit breaker. Please investigate.",
+                                     this.clientName, this.hystrixCommandKey.name());
             default:
                 throw new IllegalArgumentException(this.status + " is not a valid status");
         }

@@ -8,7 +8,7 @@ import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.opower.rest.client.generator.core.ClientBuilder;
+import com.opower.rest.client.generator.core.Client;
 import com.opower.rest.client.generator.core.ResourceInterface;
 import com.opower.rest.client.generator.core.SimpleUriProvider;
 import com.opower.rest.client.generator.executors.ApacheHttpClient4Executor;
@@ -32,7 +32,7 @@ public class BasicFrobClientLoader implements FrobClientLoader {
     @Override
     public Map<String, FrobResource> clientsToTest(final int port, String type) {
         try {
-            ClientBuilder<FrobResource> clientBuilder = ClientBuilder.instance(new ResourceInterface<>(FrobResource.class),
+            Client.Builder<FrobResource> clientBuilder = new Client.Builder<>(new ResourceInterface<>(FrobResource.class),
                     new SimpleUriProvider(String.format("http://localhost:%s/", port)))
                     .executor(new ApacheHttpClient4Executor()).messageBodyProviders(JACKSON_JSON_PROVIDER, JACKSON_JSON_PROVIDER);
             return ImmutableMap.of("default", clientBuilder.build());

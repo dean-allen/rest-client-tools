@@ -2,14 +2,6 @@ package com.opower.rest.client.generator.core;
 
 import com.opower.rest.client.generator.extractors.DefaultEntityExtractorFactory;
 import com.opower.rest.client.generator.util.IsHttpMethod;
-
-import javax.ws.rs.Path;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.ext.ContextResolver;
-import javax.ws.rs.ext.ExceptionMapper;
-import javax.ws.rs.ext.MessageBodyReader;
-import javax.ws.rs.ext.MessageBodyWriter;
-import javax.ws.rs.ext.Providers;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -17,52 +9,53 @@ import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
+import javax.ws.rs.Path;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.ext.ContextResolver;
+import javax.ws.rs.ext.ExceptionMapper;
+import javax.ws.rs.ext.MessageBodyReader;
+import javax.ws.rs.ext.MessageBodyWriter;
+import javax.ws.rs.ext.Providers;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public class ClientBuilder<T> {
+/**
+ * Base class to make the return types of the inherited builders work correctly.
+ * @author chris.phillips
+ * @param <T> the type of the client to be created
+ * @param <B> the type of the concrete builder
+ */
+public abstract class Client<T, B extends Client<T, B>> {
 
-    public static <T> ClientBuilder<T> instance(ResourceInterface<T> resourceInterface, UriProvider uriProvider) throws Exception {
-        return new ClientBuilder<T>(resourceInterface, uriProvider);
-    }
-
-    protected final ResourceInterface<T> resourceInterface;
-    protected final UriProvider uriProvider;
-    protected final ClassLoader loader;
     protected ClientExecutor executor;
     protected Providers providers;
     protected List<ClientErrorInterceptor> clientErrorInterceptors;
+    protected final ResourceInterface<T> resourceInterface;
+    protected final UriProvider uriProvider;
+    protected final ClassLoader loader;
 
-    protected ClientBuilder(ResourceInterface<T> resourceInterface, UriProvider uriProvider) {
+    protected Client(ResourceInterface<T> resourceInterface, UriProvider uriProvider) {
         this.resourceInterface = checkNotNull(resourceInterface);
         this.uriProvider = checkNotNull(uriProvider);
         this.loader = checkNotNull(resourceInterface.getInterface().getClassLoader());
     }
 
-    public ClientBuilder<T> clientErrorInterceptors(List<ClientErrorInterceptor> clientErrorInterceptors) {
+    @SuppressWarnings("unchecked")
+    public B clientErrorInterceptors(List<ClientErrorInterceptor> clientErrorInterceptors) {
         this.clientErrorInterceptors = checkNotNull(clientErrorInterceptors);
-        return this;
+        return (B) this;
     }
 
-    public ClientBuilder<T> executor(ClientExecutor exec) {
+    @SuppressWarnings("unchecked")
+    public B executor(ClientExecutor exec) {
         this.executor = exec;
-        return this;
+        return (B) this;
     }
 
-    public ClientBuilder<T> messageBodyProviders(MessageBodyReader messageBodyReader, MessageBodyWriter messageBodyWriter) {
+    @SuppressWarnings("unchecked")
+    public B messageBodyProviders(MessageBodyReader messageBodyReader, MessageBodyWriter messageBodyWriter) {
         this.providers = buildProviders(messageBodyReader, messageBodyWriter);
-        return this;
-    }
-
-    public T build() {
-        if (this.executor == null)
-            throw new IllegalArgumentException("You must provide a ClientExecutor");
-        if (this.providers == null)
-            throw new IllegalArgumentException("can't have null Providers");
-
-        final ProxyConfig config = new ProxyConfig(this.loader, this.executor, this.providers, new DefaultEntityExtractorFactory(),
-                this.clientErrorInterceptors);
-        return createProxy(this.resourceInterface.getInterface(), this.uriProvider, config);
+        return (B) this;
     }
 
     private Providers buildProviders(final MessageBodyReader messageBodyReader, final MessageBodyWriter messageBodyWriter) {
@@ -87,6 +80,17 @@ public class ClientBuilder<T> {
                 throw new UnsupportedOperationException();
             }
         };
+    }
+
+    public T build() {
+        if (this.executor == null)
+            throw new IllegalArgumentException("You must provide a ClientExecutor");
+        if (this.providers == null)
+            throw new IllegalArgumentException("can't have null Providers");
+
+        final ProxyConfig config = new ProxyConfig(this.loader, this.executor, this.providers, new DefaultEntityExtractorFactory(),
+                                                   this.clientErrorInterceptors);
+        return createProxy(this.resourceInterface.getInterface(), this.uriProvider, config);
     }
 
     @SuppressWarnings("unchecked")
@@ -124,4 +128,14 @@ public class ClientBuilder<T> {
         return invoker;
     }
 
+    /**
+     * Basic JAX-RS client proxy builder.
+     * @param <T> the type of the ResourceInterface to build a client for
+     */
+    public static final class Builder<T> extends Client<T, Builder<T>> {
+
+        public Builder(ResourceInterface<T> resourceInterface, UriProvider uriProvider) {
+            super(resourceInterface, uriProvider);
+        }
+    }
 }

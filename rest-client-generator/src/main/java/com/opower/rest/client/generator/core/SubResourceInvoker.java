@@ -2,7 +2,6 @@ package com.opower.rest.client.generator.core;
 
 
 import com.google.common.base.Throwables;
-
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import java.lang.annotation.Annotation;
@@ -41,7 +40,7 @@ public class SubResourceInvoker implements MethodInvoker {
     @Override
     public Object invoke(Object[] args) {
         String path = String.format(format, args);
-        return ClientBuilder.createProxy(iface, new SubResourceUriProvider(path, this.baseProvider), config);
+        return Client.createProxy(iface, new SubResourceUriProvider(path, this.baseProvider), config);
     }
 
     public static class SubResourceUriProvider implements UriProvider {
