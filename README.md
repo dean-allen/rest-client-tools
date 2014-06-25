@@ -66,3 +66,8 @@ Some of these changes imply somewhat significatn changes to Archmage like reloca
 entirely, and also some refactoring (eg CuratorServiceRegistry). Some thought needs to be given to backwards compatibility and
 migration. I'm hoping that in certain cases some people could just start using the new client tools with no problems. Others will
 have to worry about what archmage they're on which is kinda hairy. But I think we can manage this transition.
+
+Releasing new version
+=====================
+1. Run the [Jenkins job](https://jenkins-dev.va.opower.it/job/rest-client-tools-release)
+2. Verify the version is [published](https://nexus.va.opower.it/nexus/content/groups/public/com/opower/opower-rest-client-builder)
