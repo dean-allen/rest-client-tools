@@ -54,7 +54,7 @@ public class TestAuthorizationClientRequestFilter extends EasyMockSupport {
     }
 
     /**
-     * Ensures a NPE is thrown when null a null request is passed in.
+     * Ensures a NPE is testRuleExpectedException when null a null request is passed in.
      */
     @Test(expected = NullPointerException.class)
     public void nullRequestFails() {

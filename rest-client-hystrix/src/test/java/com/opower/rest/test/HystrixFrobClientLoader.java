@@ -8,17 +8,18 @@ import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.opower.rest.client.generator.core.ClientBuilder;
+import com.netflix.hystrix.HystrixCommandProperties;
+import com.opower.rest.client.ConfigurationCallback;
 import com.opower.rest.client.generator.core.ResourceInterface;
 import com.opower.rest.client.generator.core.SimpleUriProvider;
 import com.opower.rest.client.generator.executors.ApacheHttpClient4Executor;
-import com.opower.rest.client.generator.hystrix.HystrixClientBuilder;
+import com.opower.rest.client.generator.hystrix.HystrixClient;
+import com.opower.rest.client.generator.hystrix.TestHystrixGroupKeys;
 import com.opower.rest.test.resource.FrobClientLoader;
 import com.opower.rest.test.resource.FrobResource;
 
 import java.util.Map;
 
-import static com.netflix.hystrix.HystrixCommandProperties.Setter;
 
 /**
  * Assembles sample clients using the HystrixClientBuilder.
@@ -26,7 +27,7 @@ import static com.netflix.hystrix.HystrixCommandProperties.Setter;
  */
 public class HystrixFrobClientLoader implements FrobClientLoader {
 
-    private static final int FIVE_SECONDS = 5000;
+    private static final int TEN_SECONDS = 10000;
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .setDateFormat(new ISO8601DateFormat())
             .registerModule(new GuavaModule())
@@ -37,12 +38,19 @@ public class HystrixFrobClientLoader implements FrobClientLoader {
     @Override
     public Map<String,FrobResource> clientsToTest(final int port, String type) {
         try {
-            ClientBuilder<FrobResource> clientBuilder = new HystrixClientBuilder<>(
+            HystrixClient.Builder<FrobResource> clientBuilder = new HystrixClient.Builder<FrobResource>(
                     new ResourceInterface<>(FrobResource.class),
                     new SimpleUriProvider(String.format("http://localhost:%s", port)),
-                Setter().withExecutionIsolationThreadTimeoutInMilliseconds(FIVE_SECONDS))
+                    TestHystrixGroupKeys.TEST_GROUP)
                     .executor(new ApacheHttpClient4Executor())
+                    .commandProperties(new ConfigurationCallback<HystrixCommandProperties.Setter>() {
+                        @Override
+                        public void configure(HystrixCommandProperties.Setter setter) {
+                            setter.withExecutionIsolationThreadTimeoutInMilliseconds(TEN_SECONDS);
+                        }
+                    })
                     .messageBodyProviders(JACKSON_JSON_PROVIDER, JACKSON_JSON_PROVIDER);
+
             return ImmutableMap.of("default", clientBuilder.build());
         } catch (Exception ex) {
             throw Throwables.propagate(ex);

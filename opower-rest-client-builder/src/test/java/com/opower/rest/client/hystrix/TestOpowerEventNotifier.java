@@ -11,7 +11,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import static org.easymock.EasyMock.anyObject;
-import static org.easymock.EasyMock.anyString;
+import static org.easymock.EasyMock.eq;
 import static org.easymock.EasyMock.expectLastCall;
 
 /**
@@ -24,9 +24,10 @@ public class TestOpowerEventNotifier extends EasyMockSupport {
 
     private static final HystrixCommandKey KEY = HystrixCommandKey.Factory.asKey("testKey");
     private static final String CLIENT_NAME = "clientName";
+    private static final String COUNTER_NAME = String.format("%s.shortcircuit.count", KEY.name());
+    private static final String GAUGE_NAME = String.format("%s.circuitbreaker.open", KEY.name());
     
-    private CommandStatusListener shortCircuitService;
-    private OpowerEventNotifier opowerEventNotifier;
+    private OpowerEventNotifier opowerEventNotifier = new OpowerEventNotifier();
     private MetricsProvider metricsProvider;
 
     /**
@@ -34,10 +35,9 @@ public class TestOpowerEventNotifier extends EasyMockSupport {
      */
     @Before
     public void setUp() {
-        this.shortCircuitService = createStrictMock(CommandStatusListener.class);
-        this.opowerEventNotifier = new OpowerEventNotifier(this.shortCircuitService);
-        this.metricsProvider = createNiceMock(MetricsProvider.class);
-        this.metricsProvider.gauge(anyString(), anyObject(MetricsProvider.Gauge.class));
+        this.metricsProvider = createStrictMock(MetricsProvider.class);
+        this.metricsProvider.gauge(eq(GAUGE_NAME), anyObject(MetricsProvider.Gauge.class));
+        expectLastCall();
     }
 
     /**
@@ -49,14 +49,12 @@ public class TestOpowerEventNotifier extends EasyMockSupport {
     }
 
     /**
-     * If the first time an event for a Command is a SHORT_CIRCUITED type, then a CommandStatus
-     * should be sent.
+     * If the first time an event for a Command is a SHORT_CIRCUITED type then we mark a short circuit.
      */
     @Test
-    public void firstShortCircuitSendsStatus() {
-        this.shortCircuitService.handleCommandStatus(anyObject(CommandStatus.class));
-        expectLastCall();
-        
+    public void firstShortCircuitGetsMarked() {
+        this.metricsProvider.mark(COUNTER_NAME);
+        expectLastCall().once();
         replayAll();
         OpowerEventNotifier.registerClient(KEY, CLIENT_NAME, this.metricsProvider);
         this.opowerEventNotifier.processShortCircuit(KEY);
@@ -65,12 +63,11 @@ public class TestOpowerEventNotifier extends EasyMockSupport {
     }
 
     /**
-     * If multiple SHORT_CIRCUITED events are processed in a row, only one CommandStatus should
-     * be sent.
+     * A short circuit only is counted if there was a change from closed to open.
      */
     @Test
-    public void multipleShortCircuitSendsOneStatus() {
-        this.shortCircuitService.handleCommandStatus(anyObject(CommandStatus.class));
+    public void consecutiveShortCircuitStatusesMarksOnce() {
+        this.metricsProvider.mark(COUNTER_NAME);
         expectLastCall().once();
         replayAll();
         OpowerEventNotifier.registerClient(KEY, CLIENT_NAME, this.metricsProvider);
@@ -80,54 +77,14 @@ public class TestOpowerEventNotifier extends EasyMockSupport {
     }
 
     /**
-     * The first time a SUCCESS event is processed nothing should happen.
-     */
-    @Test
-    public void firstSuccessEventDoesNothing() {
-        replayAll();
-        OpowerEventNotifier.registerClient(KEY, CLIENT_NAME, this.metricsProvider);
-        this.opowerEventNotifier.processSuccess(KEY);
-        verifyAll();
-    }
-
-    /**
-     * If multiple SUCCESS events in a row are processed, nothing should happen.
-     */
-    @Test
-    public void multipleSuccessEventsDoesNothing() {
-        replayAll();
-        OpowerEventNotifier.registerClient(KEY, CLIENT_NAME, this.metricsProvider);
-        this.opowerEventNotifier.processSuccess(KEY);
-        this.opowerEventNotifier.processSuccess(KEY);
-        this.opowerEventNotifier.processSuccess(KEY);
-        verifyAll();
-    }
-
-    /**
-     * When a circuit resumes normal operation a Status should be sent.
-     */
-    @Test
-    public void changeFromOpenToClosedSendsOneStatus() {
-        this.shortCircuitService.handleCommandStatus(anyObject(CommandStatus.class));
-        expectLastCall();
-        replayAll();
-        
-        OpowerEventNotifier.primeForTesting(ImmutableMap.of(KEY, true));
-        OpowerEventNotifier.registerClient(KEY, CLIENT_NAME, this.metricsProvider);
-        this.opowerEventNotifier.processSuccess(KEY);
-        this.opowerEventNotifier.processSuccess(KEY);
-        verifyAll();    
-    }
-
-    /**
      * When a short-circuit occurs a Status is sent.
      */
     @Test
     public void changeFromClosedToOpenSendsOneStatus() {
-        this.shortCircuitService.handleCommandStatus(anyObject(CommandStatus.class));
-        expectLastCall();
+        this.metricsProvider.mark(COUNTER_NAME);
         replayAll();
 
+        // set the status for the key to show it currently closed
         OpowerEventNotifier.primeForTesting(ImmutableMap.of(KEY, false));
         OpowerEventNotifier.registerClient(KEY, CLIENT_NAME, this.metricsProvider);
         this.opowerEventNotifier.processShortCircuit(KEY);
