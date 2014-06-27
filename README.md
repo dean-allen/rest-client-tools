@@ -1,6 +1,8 @@
 rest-client-tools
 =================
 
+[![Build Status](http://jenkins-dev.va.opower.it/job/rest-client-tools/badge/icon)](http://jenkins-dev.va.opower.it/job/rest-client-tools/)
+
 Tools for generating JAX-RS proxies.
 
 First thing you'll want to do is clone this so you can explore. I purposefully didn't create this as a PR to try and discourage
