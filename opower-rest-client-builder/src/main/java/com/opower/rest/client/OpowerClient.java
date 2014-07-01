@@ -97,6 +97,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
         this.serviceName = checkNotNull(serviceName);
         this.metricsProvider = Optional.of(METRICS_PROVIDER_FACTORY.instance(this.serviceName));
         this.sensuConfiguration = Optional.of(new SensuConfiguration.Setter()
+                                                      .setClientId(clientId)
                                                       .filterOnClasses(ImmutableSet.<Class<?>>of(
                                                               resourceInterface)));
         this.clientRequestFilters = ImmutableList.of(
@@ -262,16 +263,21 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     }
 
     /**
-     * Provide custom settings for the metrics publisher.
+     * Provide custom settings for the Sensu metrics publisher.
      *
-     * @param sensuConfiguration the SensuConfiguration to use
+     * @param callback the ConfigurationCallback to use
      * @return the builder
      */
     @SuppressWarnings("unchecked")
-    public B configureSensuPublisher(SensuConfiguration.Setter sensuConfiguration) {
-        checkNotNull(sensuConfiguration);
-        this.sensuConfiguration = Optional.of(sensuConfiguration.filterOnClasses(
-                ImmutableSet.<Class<?>>of(this.resourceInterface.getInterface())));
+    public B configureSensuPublisher(ConfigurationCallback<SensuConfiguration.Setter> callback) {
+        checkNotNull(callback);
+        if (!this.sensuConfiguration.isPresent()) {
+            throw new IllegalStateException("Cannot configure Sensu publishing if you have disabled it previously.");
+        }
+        callback.configure(this.sensuConfiguration.get());
+        // in case they for some strange reason decided to overwrite the clientId.
+        // TODO: ISP-1183 will eliminate the need for this
+        this.sensuConfiguration.get().setClientId(this.clientId);
         return (B) this;
     }
 
@@ -349,8 +355,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
 
     private void configureSensuPublishing() {
         if (this.sensuConfiguration.isPresent()) {
-            SensuConfiguration configToUse = new SensuConfiguration(this.sensuConfiguration.get()
-                                                                                           .setClientId(this.clientId));
+            SensuConfiguration configToUse = new SensuConfiguration(this.sensuConfiguration.get());
             SENSU_PUBLISHER_FACTORY.instance(this.serviceName, configToUse).start();
         }
     }
