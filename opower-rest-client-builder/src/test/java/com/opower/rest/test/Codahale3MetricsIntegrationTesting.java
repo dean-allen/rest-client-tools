@@ -56,7 +56,7 @@ public class Codahale3MetricsIntegrationTesting {
         client.updateFrob(FROB_ID, FROB_ID);
         client.createFrob(new Frob(FROB_ID));
 
-        MetricRegistry metricRegistry = SharedMetricRegistries.getOrCreate(SERVICE_NAME);
+        MetricRegistry metricRegistry = SharedMetricRegistries.getOrCreate(String.format("%s.client",SERVICE_NAME));
         assertThat(metricRegistry.getTimers().size(), is(FROB_METHOD_COUNT));
         // metrics are created lazily
         assertThat(metricRegistry.getCounters().size(), is(0));
