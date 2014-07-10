@@ -93,18 +93,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
      *                          metrics and alerts.
      */
     protected OpowerClient(Class<T> resourceInterface, UriProvider uriProvider, String serviceName, String clientId) {
-        super(new OpowerResourceInterface<>(resourceInterface), uriProvider, groupKey(clientId));
-        this.serviceName = checkNotNull(serviceName);
-        this.metricsProvider = Optional.of(METRICS_PROVIDER_FACTORY.instance(this.serviceName));
-        this.sensuConfiguration = Optional.of(new SensuConfiguration.Setter()
-                                                      .setClientId(clientId)
-                                                      .filterOnClasses(ImmutableSet.<Class<?>>of(
-                                                              resourceInterface)));
-        this.clientRequestFilters = ImmutableList.of(
-                new RequestIdFilter(),
-                new ServiceNameClientRequestFilter(serviceName));
-
-        this.clientId = clientId;
+        this(new OpowerResourceInterface<>(resourceInterface), uriProvider, serviceName, clientId);
     }
 
     /**
@@ -120,10 +109,53 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
      */
     protected OpowerClient(Class<T> resourceInterface, ServiceDiscovery<Void> serviceDiscovery,
                            String serviceName, String clientId) {
-        this(resourceInterface, new CuratorUriProvider(checkNotNull(serviceDiscovery), checkNotNull(serviceName)), serviceName,
-             clientId);
+        this(new OpowerResourceInterface<>(resourceInterface), serviceDiscovery, serviceName, clientId);
+    }
+
+    /**
+     * Creates an OpowerClient instance that will use Zookeeper to look up server urls. This is
+     * the preferred method of creating client instances.
+     *
+     * @param resourceInterface the OpowerResourceInterface to use
+     * @param serviceDiscovery  The curator ServiceDiscovery instance that will be used to look up server urls
+     * @param serviceName       The serviceName. This should match the name of the service as registered in Zookeeper
+     * @param clientId          the oauth2 clientId. If you are not authorizing these service calls for some reason you must
+     *                          still provide a clientId that can be used to identify the traffic this client will generate in
+     *                          metrics and alerts.
+     */
+    protected OpowerClient(OpowerResourceInterface<T> resourceInterface, ServiceDiscovery<Void> serviceDiscovery,
+                           String serviceName, String clientId) {
+        this(resourceInterface, new CuratorUriProvider(checkNotNull(serviceDiscovery), checkNotNull(serviceName)),
+             serviceName, clientId);
         this.serviceDiscovery = Optional.of(serviceDiscovery);
     }
+    /**
+     * Creates an OpowerClient instance that will use an alternate UriProvider (rather than the default
+     * CuratorUriProvider you get when using the other constructor). You should have a really good reason to use this
+     * constructor.
+     *
+     * @param resourceInterface the OpowerResourceInterface to use
+     * @param uriProvider       the UriProvider to use
+     * @param serviceName       the name of the service you are consuming
+     * @param clientId          the oauth2 clientId. If you are not authorizing these service calls for some reason you must
+     *                          still provide a clientId that can be used to identify the traffic this client will generate in
+     *                          metrics and alerts.
+     */
+    protected OpowerClient(OpowerResourceInterface<T> resourceInterface, UriProvider uriProvider,
+                           String serviceName, String clientId) {
+        super(resourceInterface, uriProvider, groupKey(clientId));
+        this.serviceName = checkNotNull(serviceName);
+        this.metricsProvider = Optional.of(METRICS_PROVIDER_FACTORY.instance(this.serviceName));
+        this.sensuConfiguration = Optional.of(new SensuConfiguration.Setter()
+                                                      .filterOnClasses(ImmutableSet.<Class<?>>of(
+                                                              resourceInterface.getInterface())));
+        this.clientRequestFilters = ImmutableList.of(
+                new RequestIdFilter(),
+                new ServiceNameClientRequestFilter(serviceName));
+
+        this.clientId = clientId;
+    }
+
 
     private static HystrixCommandGroupKey groupKey(String clientId) {
         checkArgument(clientId != null && clientId.matches(VALID_CLIENT_NAME_PATTERN),
@@ -424,6 +456,22 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
         }
 
         /**
+         * Creates an OpowerClient.Builder instance that will use an alternate UriProvider (rather than the default
+         * CuratorUriProvider you get when using the other constructor). You should have a really good reason to use this
+         * constructor. This constructor allows you to use a customized OpowerResourceInterface
+         *
+         * @param resourceInterface The OpowerResourceInterface to use.
+         * @param uriProvider       The UriProvider to use
+         * @param serviceName       The name of the service you are consuming
+         * @param clientId          The oauth2 clientId. If you are not authorizing these service calls for some reason you must
+         *                          still provide a clientId that can be used to identify the traffic this client will generate in
+         *                          metrics and alerts.
+         */
+        public Builder(OpowerResourceInterface<T> resourceInterface, UriProvider uriProvider, String serviceName, String clientId) {
+            super(resourceInterface, uriProvider, serviceName, clientId);
+        }
+
+        /**
          * Creates an OpowerClient.Builder instance that will use Zookeeper to look up server urls. This is
          * the preferred method of creating client instances.
          *
@@ -438,5 +486,23 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
                        ServiceDiscovery<Void> serviceDiscovery, String serviceName, String clientId) {
             super(resourceInterface, serviceDiscovery, serviceName, clientId);
         }
+
+        /**
+         * Creates an OpowerClient.Builder instance that will use Zookeeper to look up server urls. This is
+         * the preferred method of creating client instances if you have to create your own OpowerResourceInterface instance
+         * with custom package names allowed.
+         *
+         * @param resourceInterface the OpowerResourceInterface to use.
+         * @param serviceDiscovery  The curator ServiceDiscovery instance that will be used to look up server urls
+         * @param serviceName       The serviceName. This should match the name of the service as registered in Zookeeper
+         * @param clientId          the oauth2 clientId. If you are not authorizing these service calls for some reason you must
+         *                          still provide a clientId that can be used to identify the traffic this client will generate in
+         *                          metrics and alerts.
+         */
+        public Builder(OpowerResourceInterface resourceInterface, ServiceDiscovery<Void> serviceDiscovery,
+                       String serviceName, String clientId) {
+            super(resourceInterface, serviceDiscovery, serviceName, clientId);
+        }
+
     }
 }
