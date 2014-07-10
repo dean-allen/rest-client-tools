@@ -69,8 +69,6 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     private final String clientId;
 
     private List<ClientRequestFilter> clientRequestFilters;
-    private List<ClientErrorInterceptor> clientErrorInterceptors = ImmutableList
-            .<ClientErrorInterceptor>of(new ExceptionMapperInterceptor());
     private ExponentialRetryStrategy retryStrategy = new ExponentialRetryStrategy();
     private int tokenTtlRefresh;
     private Optional<ServiceDiscovery<Void>> serviceDiscovery = Optional.absent();
@@ -152,7 +150,8 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
         this.clientRequestFilters = ImmutableList.of(
                 new RequestIdFilter(),
                 new ServiceNameClientRequestFilter(serviceName));
-
+        this.clientErrorInterceptors = ImmutableList
+                .<ClientErrorInterceptor>of(new ExceptionMapperInterceptor());
         this.clientId = clientId;
     }
 
@@ -202,18 +201,6 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     public B addClientRequestFilter(ClientRequestFilter clientRequestFilter) {
         this.clientRequestFilters = ImmutableList.<ClientRequestFilter>builder()
                                                  .addAll(this.clientRequestFilters).add(clientRequestFilter).build();
-        return (B) this;
-    }
-
-    /**
-     * Specify a new List of ClientErrorInterceptors to use instead of the default.
-     *
-     * @param clientErrorInterceptors the ClientErrorInterceptors to use.
-     * @return the builder
-     */
-    @SuppressWarnings("unchecked")
-    public B setErrorInterceptors(List<ClientErrorInterceptor> clientErrorInterceptors) {
-        this.clientErrorInterceptors = ImmutableList.copyOf(clientErrorInterceptors);
         return (B) this;
     }
 
