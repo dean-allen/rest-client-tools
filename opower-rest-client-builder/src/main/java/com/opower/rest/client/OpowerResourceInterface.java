@@ -77,6 +77,7 @@ public class OpowerResourceInterface<T> extends ResourceInterface<T> {
         builder.add("javax.ws.rs");
         builder.add("com.google.common");
         builder.add("com.fasterxml.jackson.annotation");
+        builder.add("com.fasterxml.jackson.databind.annotation");
         builder.add("javax.annotation");
         builder.add("javax.validation");
         builder.add("org.hibernate.validator.constraints");
