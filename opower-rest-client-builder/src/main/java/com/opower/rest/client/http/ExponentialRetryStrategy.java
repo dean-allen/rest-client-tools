@@ -12,7 +12,7 @@ import org.apache.http.protocol.HttpContext;
 public class ExponentialRetryStrategy implements ServiceUnavailableRetryStrategy {
 
     public static final int DEFAULT_MAX_ATTEMPTS = 2;
-    public static final long DEFAULT_RETRY_INTERVAL_IN_MS = 100;
+    public static final long DEFAULT_RETRY_INTERVAL_IN_MS = 1000;
     private static final long MAX_INTERVAL_IN_MS = 10000;
     
     private final int maxAttempts;

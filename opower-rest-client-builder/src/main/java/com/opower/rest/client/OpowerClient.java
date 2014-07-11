@@ -54,6 +54,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends HystrixClient<T, B> {
     public static final String AUTH_SERVICE_NAME = "authorization-v1";
 
+    private static final int DEFAULT_TOKEN_TTL_REFRESH = 2;
     private static final String VALID_CLIENT_NAME_PATTERN = "[a-zA-Z0-9\\-\\.]+";
     private static final MetricsProviderFactory METRICS_PROVIDER_FACTORY = FactoryLoaders.METRIC_PROVIDER.load();
     private static final SensuPublisherFactory SENSU_PUBLISHER_FACTORY = FactoryLoaders.SENSU_PUBLISHER.load();
@@ -70,7 +71,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
 
     private List<ClientRequestFilter> clientRequestFilters;
     private ExponentialRetryStrategy retryStrategy = new ExponentialRetryStrategy();
-    private int tokenTtlRefresh;
+    private int tokenTtlRefresh = DEFAULT_TOKEN_TTL_REFRESH;
     private Optional<ServiceDiscovery<Void>> serviceDiscovery = Optional.absent();
     private Optional<BasicAuthCredentials> authorizationCredentials = Optional.absent();
     private Optional<UriProvider> authUriProvider = Optional.absent();
