@@ -81,6 +81,7 @@ public class OpowerResourceInterface<T> extends ResourceInterface<T> {
         builder.add("javax.annotation");
         builder.add("javax.validation");
         builder.add("org.hibernate.validator.constraints");
+        builder.add("org.slf4j");
 
         Set<String> packageSet = Sets.newHashSet(supportingPackages);
         checkArgument(Iterables.all(packageSet, new Predicate<String>() {
