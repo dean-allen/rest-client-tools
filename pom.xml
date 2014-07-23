@@ -1003,6 +1003,7 @@
     <modules>
         <module>rest-client-generator</module>
         <module>opower-rest-client-builder</module>
+        <module>opower-rest-client-builder-test</module>
         <module>rest-client-hystrix</module>
         <module>rest-interface-base</module>
         <module>rest-client-test</module>
