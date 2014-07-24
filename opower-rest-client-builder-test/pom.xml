@@ -17,7 +17,7 @@
         <dependency>
             <groupId>com.opower</groupId>
             <artifactId>opower-rest-client-builder</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.hamcrest</groupId>
