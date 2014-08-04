@@ -12,7 +12,7 @@
 
     <groupId>com.opower</groupId>
     <artifactId>rest-client-tools</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <distributionManagement>
