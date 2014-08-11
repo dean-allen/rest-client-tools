@@ -62,7 +62,7 @@ public class StringConverters {
                 return value.get().toString();
             }
 
-            return "";
+            return null;
         }
     }
 

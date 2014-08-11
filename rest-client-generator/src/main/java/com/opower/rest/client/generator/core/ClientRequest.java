@@ -105,17 +105,26 @@ public class ClientRequest implements Cloneable {
     }
 
     public ClientRequest formParameter(String parameterName, Object value) {
-        getFormParameters().add(parameterName, toString(value));
+        String stringValue = toString(value);
+        if (stringValue != null) {
+            getFormParameters().add(parameterName, toString(value));
+        }
         return this;
     }
 
     public ClientRequest queryParameter(String parameterName, Object value) {
-        getQueryParameters().add(parameterName, toString(value));
+        String stringValue = toString(value);
+        if (stringValue != null) {
+            getQueryParameters().add(parameterName, stringValue);
+        }
         return this;
     }
 
     public ClientRequest matrixParameter(String parameterName, Object value) {
-        getMatrixParameters().add(parameterName, toString(value));
+        String stringValue = toString(value);
+        if (stringValue != null) {
+            getMatrixParameters().add(parameterName, toString(value));
+        }
         return this;
     }
 
