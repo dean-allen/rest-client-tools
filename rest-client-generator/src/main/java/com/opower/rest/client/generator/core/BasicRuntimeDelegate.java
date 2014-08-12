@@ -12,7 +12,7 @@ import javax.ws.rs.ext.RuntimeDelegate;
  * This class is only for situations where no JAX-RS implementation is found on the classpath. The client can still work
  * by using this little class. All you have to do is set a system property on the jvm
  *
- * -Djavax.ws.rs.ext.RuntimeDelegate=com.opower.rest.client.generator.BasicRuntimeDelegate
+ * -Djavax.ws.rs.ext.RuntimeDelegate=com.opower.rest.client.generator.core.BasicRuntimeDelegate
  * @author chris.phillips
  */
 public class BasicRuntimeDelegate extends RuntimeDelegate {

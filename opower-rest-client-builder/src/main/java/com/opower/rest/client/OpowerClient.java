@@ -8,6 +8,7 @@ import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.netflix.hystrix.HystrixCommandGroupKey;
@@ -144,7 +145,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
                            String serviceName, String clientId) {
         super(resourceInterface, uriProvider, groupKey(clientId));
         this.serviceName = checkNotNull(serviceName);
-        this.metricsProvider = Optional.of(METRICS_PROVIDER_FACTORY.instance(this.serviceName));
+        this.metricsProvider = Optional.of(METRICS_PROVIDER_FACTORY.getInstance(String.format("%s.client", this.serviceName)));
         this.sensuConfiguration = Optional.of(new SensuConfiguration.Setter()
                                                       .filterOnClasses(ImmutableSet.<Class<?>>of(
                                                               resourceInterface.getInterface())));
@@ -295,9 +296,6 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
             throw new IllegalStateException("Cannot configure Sensu publishing if you have disabled it previously.");
         }
         callback.configure(this.sensuConfiguration.get());
-        // in case they for some strange reason decided to overwrite the clientId.
-        // TODO: ISP-1183 will eliminate the need for this
-        this.sensuConfiguration.get().setClientId(this.clientId);
         return (B) this;
     }
 
@@ -376,7 +374,9 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     private void configureSensuPublishing() {
         if (this.sensuConfiguration.isPresent()) {
             SensuConfiguration configToUse = new SensuConfiguration(this.sensuConfiguration.get());
-            SENSU_PUBLISHER_FACTORY.instance(this.serviceName, configToUse).start();
+            SENSU_PUBLISHER_FACTORY.getInstance(configToUse).startPublishingFor(this.metricsProvider.get(),
+                String.format("service.client.%s.%s", this.serviceName, this.clientId),
+                Predicates.<String>alwaysTrue());
         }
     }
 

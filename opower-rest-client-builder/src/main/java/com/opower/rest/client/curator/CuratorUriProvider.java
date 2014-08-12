@@ -45,8 +45,6 @@ public class CuratorUriProvider implements UriProvider {
         this.serviceName = serviceName;
     }
 
-
-
     /**
      * Creates a representative {@link java.net.InetSocketAddress} for the specified
      * {@link org.apache.curator.x.discovery.ServiceInstance}.
@@ -55,7 +53,7 @@ public class CuratorUriProvider implements UriProvider {
      * @return an address for a valid service instance we can connect to.
      */
     private URI createAddressFromInstance(ServiceInstance<Void> serviceInstance)  {
-        checkNotNull(serviceInstance);
+        checkNotNull(serviceInstance, "No instances registered in Zookeeper");
         // TODO: don't hard code http
         return URI.create(String.format("http://%s:%s", serviceInstance.getAddress(), serviceInstance.getPort()));
     }

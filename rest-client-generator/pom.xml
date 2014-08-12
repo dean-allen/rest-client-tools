@@ -11,9 +11,6 @@
     </parent>
 
     <artifactId>rest-client-generator</artifactId>
-    <packaging>jar</packaging>
-    <name>JAX-RS Proxy Client Generator</name>
-    <url>http://opower.com/</url>
 
     <build>
         <plugins>
