@@ -8,9 +8,9 @@ import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
 import com.netflix.hystrix.strategy.HystrixPlugins;
@@ -79,7 +79,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     private Optional<ConfigurationCallback<HttpParams>> httpClientParams = Optional.absent();
     private Optional<MetricsProvider> metricsProvider = Optional.absent();
     private Optional<SensuConfiguration.Setter> sensuConfiguration = Optional.of(new SensuConfiguration.Setter());
-
+    private Predicate<String> metricPublishingFilter = Predicates.<String>alwaysTrue();
     /**
      * Creates an OpowerClient instance that will use an alternate UriProvider (rather than the default
      * CuratorUriProvider you get when using the other constructor). You should have a really good reason to use this
@@ -146,9 +146,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
         super(resourceInterface, uriProvider, groupKey(clientId));
         this.serviceName = checkNotNull(serviceName);
         this.metricsProvider = Optional.of(METRICS_PROVIDER_FACTORY.getInstance(String.format("%s.client", this.serviceName)));
-        this.sensuConfiguration = Optional.of(new SensuConfiguration.Setter()
-                                                      .filterOnClasses(ImmutableSet.<Class<?>>of(
-                                                              resourceInterface.getInterface())));
+        this.sensuConfiguration = Optional.of(new SensuConfiguration.Setter());
         this.clientRequestFilters = ImmutableList.of(
                 new RequestIdFilter(),
                 new ServiceNameClientRequestFilter(serviceName));
@@ -284,7 +282,25 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     }
 
     /**
-     * Provide custom settings for the Sensu metrics publisher.
+     * The default is to send all metrics associated with this client. If you wish to filter out some of the metrics you can do
+     * so by providing a filter predicate here. The filter operates on metrics by name.
+     * @param filter the filter to use
+     * @return the builder
+     */
+    public B sensuPublishingFilter(Predicate<String> filter) {
+        this.metricPublishingFilter = checkNotNull(filter);
+        return (B) this;
+    }
+
+    /**
+     * Provide custom settings for the Sensu metrics publisher. Note, there is only one SensuPublisher instance per JVM.
+     * If you have already configured the publishing elsewhere then calling this method will have no effect. In archmage services
+     * particularly calling this method is unnecessary and will have no effect since archmage manages the SensuPublishing and you
+     * would apply any special configuration settings there.
+     *
+     * This method is mainly a convenience for those who are creating clients outside of archmage and don't want to set up all
+     * the publishing manually. In such a case, if something about the publishing needs tweaked (publish interval etc)
+     * it can be accomplished here.
      *
      * @param callback the ConfigurationCallback to use
      * @return the builder
@@ -376,7 +392,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
             SensuConfiguration configToUse = new SensuConfiguration(this.sensuConfiguration.get());
             SENSU_PUBLISHER_FACTORY.getInstance(configToUse).startPublishingFor(this.metricsProvider.get(),
                 String.format("service.client.%s.%s", this.serviceName, this.clientId),
-                Predicates.<String>alwaysTrue());
+                this.metricPublishingFilter);
         }
     }
 
