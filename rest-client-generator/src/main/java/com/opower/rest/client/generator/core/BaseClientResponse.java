@@ -168,11 +168,13 @@ public class BaseClientResponse<T> extends ClientResponse<T> {
     }
 
     @Override
-    public void resetStream() {
+    public boolean resetStream() {
         try {
             this.streamFactory.getInputStream().reset();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            return true;
+        } catch (Exception e) {
+            LOG.debug("couldn't reset stream.", e);
+            return false;
         }
     }
 

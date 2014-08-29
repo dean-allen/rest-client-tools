@@ -100,7 +100,9 @@ public class ExceptionMapperInterceptor implements ClientErrorInterceptor {
      */
     public static String fetchResponseBody(ClientResponse<?> response) {
         try {
-            response.resetStream();
+            if (!response.resetStream()) {
+                return null;
+            }
 
             InputStream stream;
             if (response instanceof BaseClientResponse) {
