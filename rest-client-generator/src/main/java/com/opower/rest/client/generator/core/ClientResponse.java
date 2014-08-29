@@ -98,8 +98,9 @@ public abstract class ClientResponse<T> extends Response {
 
     /**
      * Attempts to reset the InputStream of the response.  Useful for refetching an entity after a marshalling failure
+     * @return
      */
-    public abstract void resetStream();
+    public abstract boolean resetStream();
 
     public abstract void releaseConnection();
 

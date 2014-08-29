@@ -14,6 +14,7 @@ import java.util.List;
  * This class handles client errors (of course...).
  *
  * @author Solomon.Duskis
+ * @author chris.phillips
  */
 
 // TODO: expand this class for more robust, complicated error handling
@@ -28,6 +29,13 @@ public class ClientErrorHandler {
 
     @SuppressWarnings("unchecked")
     public void clientErrorHandling(BaseClientResponse clientResponse, RuntimeException e) {
+        // any of the ClientErrorInterceptors might throw a more appropriate exception. Or there might be a bug in one of the
+        // ClientErrorInterceptors that throws a confusing Exception and the real source of the problem gets swallowed.
+        // To avoid that, always log the original Exception here before allowing the ClientErrorInterceptors to proceed
+        // If there are no ClientErrorInterceptors, then the original exception will be thrown and there's no need to log it
+        if(!interceptors.isEmpty()) {
+            LOG.error("Error while processing response", e);
+        }
         for (ClientErrorInterceptor handler : interceptors) {
             try {
                 // attempt to reset the stream in order to provide a fresh stream
