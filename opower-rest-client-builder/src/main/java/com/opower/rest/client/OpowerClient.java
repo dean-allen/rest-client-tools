@@ -13,6 +13,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
+import com.netflix.hystrix.HystrixThreadPoolProperties;
 import com.netflix.hystrix.strategy.HystrixPlugins;
 import com.opower.auth.resources.oauth2.AccessTokenResource;
 import com.opower.metrics.FactoryLoaders;
@@ -56,6 +57,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     public static final String AUTH_SERVICE_NAME = "authorization-v1";
 
     private static final int DEFAULT_TOKEN_TTL_REFRESH = 2;
+    private static final int DEFAULT_HYSTRIX_THREAD_POOL_SIZE = 10;
     private static final String VALID_CLIENT_NAME_PATTERN = "[a-zA-Z0-9\\-\\.]+";
     private static final MetricsProviderFactory METRICS_PROVIDER_FACTORY = FactoryLoaders.METRIC_PROVIDER.load();
     private static final SensuPublisherFactory SENSU_PUBLISHER_FACTORY = FactoryLoaders.SENSU_PUBLISHER.load();
@@ -331,10 +333,22 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
         return (B) this;
     }
 
-    private HttpClient prepareHttpClient() {
+    /**
+     * Visible for testing.
+     * @return the HttpClientInstance to use.
+     */
+    HttpClient prepareHttpClient() {
+        int totalSize = 0;
+        for (HystrixThreadPoolProperties.Setter setter : this.threadPoolPropertiesMap.values()) {
+            totalSize += setter.getCoreSize() == null ? DEFAULT_HYSTRIX_THREAD_POOL_SIZE : setter.getCoreSize();
+        }
+        PoolingClientConnectionManager poolingClientConnectionManager = new PoolingClientConnectionManager();
+        poolingClientConnectionManager.setMaxTotal(totalSize);
+        poolingClientConnectionManager.setDefaultMaxPerRoute(totalSize);
+
         AutoRetryHttpClient client =
                 new org.apache.http.impl.client.AutoRetryHttpClient(
-                        new DefaultHttpClient(new PoolingClientConnectionManager()),
+                        new DefaultHttpClient(poolingClientConnectionManager),
                         this.retryStrategy);
         if (this.httpClientParams.isPresent()) {
             this.httpClientParams.get().configure(client.getParams());
