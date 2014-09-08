@@ -3,73 +3,173 @@ rest-client-tools
 
 [![Build Status](http://jenkins-dev.va.opower.it/job/rest-client-tools/badge/icon)](http://jenkins-dev.va.opower.it/job/rest-client-tools/)
 
-Tools for generating JAX-RS proxies.
+Portions of rest-client-tools have been open sourced -- checkout the README [here][https://github.com/opower/rest-client-tools]
 
-First thing you'll want to do is clone this so you can explore. I purposefully didn't create this as a PR to try and discourage
-an avalanche of nitpicking. The feedback needed at this stage is at a pretty high level. So please constrain your feedback to high
-level design concerns / suggestions. I'd also like to solicit PRs from you for important changes and unit tests that you'd like to see. 
-If you take the time to contribute code don't worry about cleaning it all up. I'll make sure to do that later when I go to move 
-this into its more official home. I'm going to put a README.md inside each of the projects with some of the notes about changes 
-I made as I moved things around. What happened was I started pulling pieces out of archmage-java-client and auth-core and 
-archmage-metrics and discovered a bunch of things that could be massaged to make the code nice and less tangly.
+This repository contains only the Opower specific extensions to rest-client-tools. 
 
+- integration with authorization-service
+- CuratorUriProvider for using our zookeeper service registration setup
+- Automatic metrics publishing to opentsdb
+- JSON serialization pre configured with sane defaults
+- Default exception handling preconfigured
 
-Here's an overview that I hope helps you get started.
+More information can be found [here][https://wiki.opower.com/display/PD/Archmage+Client+Migration+Guide]
 
-The main entry point that people would use for these tools is the ClientBuilder.
+Quick Start
+===========
 
-I've created a diagram of the various ClientBuilders provided here: https://wiki.opower.com/display/~chris.phillips/New+client+bits
-The first two, ClientBuilder and HystrixClientBuilder are designed to be very generic and have no Opower specific dependencies.
-The OpowerClientBuilder uses the HystrixClientBuilder and provides sensible Opower specific defaults.
+First add the dependency to your pom:
 
-Here are some high level notes about the important pieces:
+    <dependency>
+        <groupId>com.opower</groupId>
+        <artifactId>opower-rest-client-builder</artifactId>
+        <version>1.0.8</version>
+    </dependency>
+    
 
-ResourceClass - 
-This class wraps the interface for the JAX-RS Resource and provides validation to make sure that the class used is an interface
-and has been annotated with JAX-RS annotations etc. There is a OpowerResourceClass which provides additional validation to 
-constrain the classes used on the interface to those we have blessed.
+Service Discovery - deprecated 
+-----------------
 
-UriProvider -
-Implementations of this interface are responsible for providing the base URI for each request made by the generated proxies.
+The UriProvider described here is deprecated and will soon be replaced with SimpleUriProvider in conjunction with synapse-lite. 
+This will make the client code a lot simpler and much less error prone in many cases. This will also take a bunch of load off our
+zookeeper cluster.
 
-ClientExecutor - 
-Abstraction over http transport libraries. Allows us to choose between say httpclient or netty or some other http request library.
-Allows for processing a List<ClientRequestFilter> as well.
+The first step when building your client is to create a ServiceDiscovery instance. As of archmage 0.4.0, if the client of your service is itself another Archmage service, the Curator ServiceDiscovery instance will be available to you from the BasicService class:
 
-ClientRequestFilter -
-Implementations of this interface can modify and otherwise prepare the request before it is sent to the server.
+    ServiceDiscovery serviceDiscovery = basicService.getServiceDiscovery(); // the curator service discovery instance will be available
+                                                                        // to you from in BasicService class in archmage services
 
-ClientBuilder -
-The basis for client proxy generation. Given a ResourceClass and a UriProvider, it generates a proxy
- that will make the appropriate http requests for consuming the REST API specified by the ResourceClass.
+If the client of your service is NOT another Archmage service, you will need to build your own Curator ServiceDiscovery instance:
+
+    String connectString = "dev-zookeeper-1001.va.opower.it,dev-zookeeper-1002.va.opower.it" // string of the format (IP:Port,IP:Port,IP:Port) used connect to our ZooKeeper servers.
+    RetryPolicy retryPolicy = new RetryOneTime(1000) // See http://curator.apache.org/apidocs/org/apache/curator/RetryPolicy.html
  
-MessageBodyReader/Writer -
-Responsible for translation the to/from Java objects to the wire format required by the service. In the OpowerClientBuilder case
-we use JacksonJsonProvider for both of these.
+    CuratorFramework curatorFramework = CuratorFrameworkFactory.newClient(connectString, retryPolicy); // start by getting a CuratorFramework instance. 
+    curatorFramework.start();
+ 
+    ServiceDiscovery<Void> serviceDiscovery = ServiceDiscoveryBuilder.builder(Void.class)
+                .client(checkNotNull(curatorFramework))
+                .basePath(BASE_PATH + pathTier)                         // This needs to be /services/[tier]
+                .build(); 
+ 
+    // "[tier]" is one of the Strings in com.opower.archmage.Tier : {development, implementation, local, production, scale, stage}
+    
+Once you have a serviceDiscovery instance, you can build your very own OpowerClient.
 
-ErrorInterceptor -
-These are standar JAX-RS ErrorInterceptors used for handling errors from service calls.
+    String serviceName = "example-v1"; // this String must match the string that the archmage service used to register itself in zookeeper.
+                                       // In archmage you can obtain this by calling serviceName.getServiceName()
+ 
+    String clientId = OAUTH_CLIENT_ID // if not using auth, make sure to specify a unique static clientID that you can look for in opentsdb to find
+                                      // stats for your client. This should not be generated uniquely at runtime.
+ 
+    OpowerClient.Builder<FrobResource> clientBuilder = new OpowerClient.Builder<>(FrobResource.class, serviceDiscovery, serviceName, OAUTH_CLIENT_ID)
+                            .clientSecret(OAUTH_CLIENT_SECRET); // by specifying the oauth2 client secret, 
+                                                               // you enable the auth-service integration
+    FrobResource client = clientBuilder.build();
+ 
+    // now I can access the service with the client
+    Frob f = client.findFrob("frobId);
 
-HystrixClientBuilder -
-Adds to the basic ClientBuilder by making each http call inside a HystrixCommand. By default, all the commands will use the
-same CommandGroupKey based on the class name of the provided ResourceClass
+Configuration Overview
+======================
 
-Here is a diagram of the modules and their hierarchy:
+There are many different options for configuring your client instances. What follows is an overview of the various settings that are available to you. We have provided sensible defaults that should work in many cases. However you might have special settings needed for your particular client. Note that these builder methods should be invoked before calling build().
 
-https://wiki.opower.com/display/~chris.phillips/rest-client-tools+module+hierarchy
+The client's authorization-service integration automatically refreshes tokens for you. This process will start before the token expires to provide a buffer against failed requests. This setting specifies the number of seconds prior to token expiration that the refresh process should start. The default value is 2 seconds. If you need to expand this buffer you can do so like this:
 
-Random notes:
+    clientBuilder.tokenTtlRefreshSeconds(5); // isn't that nice that the methods spells out the units?
 
-No dependencies on anything archmage to be found here.
+Metrics collection and publishing to sensu are enabled by default. If for some strange reason you need to disable this (and it would indeed be strange) you can disable one or both. If you feel you need to disable this, please discuss your requirements with Core Platform.
 
-Uses straight slf4j api for logging.
+    clientBuilder.disableMetrics(); // sad y u no like metrics?
+    clientBuilder.disableSensuPublishing(); // also sad :(
 
-Some of these changes imply somewhat significatn changes to Archmage like relocating classes to separate libs, removing some things
-entirely, and also some refactoring (eg CuratorServiceRegistry). Some thought needs to be given to backwards compatibility and
-migration. I'm hoping that in certain cases some people could just start using the new client tools with no problems. Others will
-have to worry about what archmage they're on which is kinda hairy. But I think we can manage this transition.
+You may need to alter the proxy's requests before they are sent. For instance, you may need to add a header or some other parameter to the request. (By default, your client adds a request_id parameter and an X-Service-Name header.) You use ClientRequestFilter to customize the requests:
 
-Releasing new version
-=====================
+    ClientRequestFilter filter = new ClientRequestFilter() {
+            @Override
+            public void filter(ClientRequest request) {
+                // add a http header to the client requests
+                request.header("header name", "header value");
+            }
+    };
+ 
+    clientBuilder.addClientRequestFilter(filter); // filters are applied in the order they are added.
+    
+ClientErrorInterceptor defines the proxy's behavior in case of errors. By default, each OpowerClient uses the ExceptionMapperInterceptor which maps http status codes to nicely named exceptions. This should be sufficient for most cases. Check out the source code of ExceptionMapperInterceptor if you have more questions. Here is how you would specify your own list of custom ClientErrorInterceptors, which would replace the default ClientErrorInterceptor:
+
+    List<ClientErrorInterceptor> interceptors = ImmutableList.<ClientErrorInterceptor>of(new ClientErrorInterceptor() {
+            @Override
+            public void handle(ClientResponse<?> response) throws RuntimeException {
+                // handle the error response as you see fit
+                throw new SpecialException(response.getResponseStatus());
+            }
+        });
+ 
+    clientBuilder.clientErrorInterceptors(interceptors); // replaces the default list. The default is pretty good are you sure?
+
+If you need to make changes to the Jackson layer – e.g., enabling or disabling features based on the remote service's requirements -- you can use a ConfigurationCallback. The OpowerClient.Builder allows you to customize the internal JacksonJsonProvider / ObjectMapper instances via ConfigurationCallback instances. Think of it as a ruby block or a lambda when we finally get java 8.  Here is how you use ConfigurationCallback:
+
+    clientBuilder.configureObjectMapper(new ConfigurationCallback<ObjectMapper>() {
+                            @Override
+                            public void configure(ObjectMapper objectMapper) {
+                                // here you can configure the ObjectMapper as needed
+                                objectMapper.enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING);
+                            }
+                        })
+      .configureJacksonJsonProvider(new ConfigurationCallback<JacksonJsonProvider>() {
+                            @Override
+                            public void configure(JacksonJsonProvider jacksonJsonProvider) {
+                                // here you can configure the JacksonJsonProvider as needed
+                                jacksonJsonProvider.configure(DeserializationFeature.WRAP_EXCEPTIONS, false);
+                            }
+                        });
+
+Client proxy instances use Apache's httpclient to make requests. By default, requests that cause a 503 response will be retried once after one second. You can tweak the number of retries and starting interval for retries (the interval increases exponentially up to 10s). Also you can manipulate the HttpParams instance for the client using the ConfigurationCallback mechanism.
+
+    clientBuilder.configureRetries(3, 3000) // the sleep interval is in milliseconds
+        .httpClientParams(new ConfigurationCallback<HttpParams>() {
+              @Override
+              public void configure(HttpParams httpParams) {
+              // http://hc.apache.org/httpcomponents-client-4.2.x/httpclient/apidocs/org/apache/http/client/params/HttpClientParams.html
+                  HttpClientParams.setRedirecting(httpParams, true);               
+              }
+        });
+        
+All method invocations on client proxies are wrapped with a HystrixCommand object. Each method on your resource interface will receive its own HystrixCommandKey. This key can be overridden but shouldn't need to be (we know; you're a snowflake). The HystrixCommandProperties and HystrixThreadPoolProperties can be configured for individual methods or for the whole resource. You can also specify a fallback if a command fails. Have a look:
+ 
+    Method findFrob = FrobResource.class.getMethod("findFrob");
+    clientBuilder.methodCommandKey(findFrob, HystrixCommandKey.Factory.asKey("BEAUTIFUL_SNOWFLAKE"));
+ 
+    // this changes the command timeout for just the findFrob method with razor-like precision
+    clientBuilder.methodProperties(findFrob, new ConfigurationCallback<HystrixCommandProperties.Setter>() {
+                    @Override
+                    public void configure(HystrixCommandProperties.Setter setter) {
+                        setter.withExecutionIsolationThreadTimeoutInMilliseconds(5000);
+                    }
+    });
+ 
+    // you don't have to do it for each method invidually though. 
+    // Let's change the core pool size for all of the methods on the ResourceInterface
+    clientBuilder.threadPoolProperties(new ConfigurationCallback<HystrixThreadPoolProperties.Setter>() {
+                    @Override
+                    public void configure(HystrixThreadPoolProperties.Setter setter) {
+                        setter.withCoreSize(10);
+                    }
+     });
+ 
+    // how about a fallback?
+    clientBuilder.methodFallback(findFrob, new Callable<Object>() {
+            @Override
+            public Object call() throws Exception {
+                Frob default = new Frob();
+                default.setId("default");
+                default.setName("Generic");
+                return default;
+            }
+    });
+
+
+######Releasing new version
 1. Run the [Jenkins job](https://jenkins-dev.va.opower.it/job/rest-client-tools-release)
 2. Verify the version is [published](https://nexus.va.opower.it/nexus/content/groups/public/com/opower/opower-rest-client-builder)
