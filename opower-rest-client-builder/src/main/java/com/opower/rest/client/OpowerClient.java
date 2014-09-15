@@ -289,6 +289,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
      * @param filter the filter to use
      * @return the builder
      */
+    @SuppressWarnings("unchecked")
     public B sensuPublishingFilter(Predicate<String> filter) {
         this.metricPublishingFilter = checkNotNull(filter);
         return (B) this;
@@ -517,7 +518,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
          *                          still provide a clientId that can be used to identify the traffic this client will generate in
          *                          metrics and alerts.
          */
-        public Builder(OpowerResourceInterface resourceInterface, ServiceDiscovery<Void> serviceDiscovery,
+        public Builder(OpowerResourceInterface<T> resourceInterface, ServiceDiscovery<Void> serviceDiscovery,
                        String serviceName, String clientId) {
             super(resourceInterface, serviceDiscovery, serviceName, clientId);
         }
