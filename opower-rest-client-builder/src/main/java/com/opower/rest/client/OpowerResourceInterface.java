@@ -87,7 +87,7 @@ public class OpowerResourceInterface<T> extends ResourceInterface<T> {
         checkArgument(Iterables.all(packageSet, new Predicate<String>() {
                 @Override
                 public boolean apply(String input) {
-                    return input.startsWith("com.opower");
+                    return input.startsWith("com.opower") || input.startsWith("opower");
                 }
             }
         ));

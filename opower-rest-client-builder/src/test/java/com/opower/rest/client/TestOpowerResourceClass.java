@@ -27,7 +27,7 @@ public class TestOpowerResourceClass {
      */
     @Test
     public void testResourceInterfaceIsValid() {
-        new OpowerResourceInterface(ValidTestResource.class, "com.opower.rest.test.validation.model");
+        new OpowerResourceInterface(ValidTestResource.class, "com.opower.rest.test.validation.model", "opower.test.package");
     }
 
     /**
