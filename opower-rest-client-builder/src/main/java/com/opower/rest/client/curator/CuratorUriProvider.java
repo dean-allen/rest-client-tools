@@ -40,7 +40,7 @@ public class CuratorUriProvider implements UriProvider {
      * @param serviceProvider the mock serviceProvider to use
      * @param serviceName the serviceName to use
      */
-    CuratorUriProvider(ServiceProvider serviceProvider, String serviceName) {
+    CuratorUriProvider(ServiceProvider<Void> serviceProvider, String serviceName) {
         this.serviceProvider = serviceProvider;
         this.serviceName = serviceName;
     }

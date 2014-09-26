@@ -2,6 +2,7 @@ package com.opower.rest.client;
 
 import com.netflix.hystrix.HystrixThreadPoolProperties;
 import com.opower.rest.client.generator.core.SimpleUriProvider;
+import com.opower.rest.client.generator.core.UriProvider;
 import com.opower.rest.test.resource.FrobResource;
 import java.lang.reflect.Method;
 import org.apache.http.client.HttpClient;
@@ -22,6 +23,7 @@ public class TestOpowerClient {
     private static final String URL = "http://localhost";
     private static final String SERVICE_NAME = "test-v1";
     private static final String CLIENT_ID = "test-client-id";
+    private static final UriProvider URI_PROVIDER = new SimpleUriProvider(URL);
     /**
      * By default each hystrixcommand gets its own thread pool with a core size of 10. The connection pool for the httpclient
      * shoudl have 10 * the number of methods on the resource interface by default; That ensures it can handle the max number of
@@ -30,7 +32,7 @@ public class TestOpowerClient {
     @Test
     public void defaultHystrixThreadPoolSizeDictatesHttpClientPoolConfiguration() {
         OpowerClient opowerClient = new OpowerClient.Builder(FrobResource.class,
-                                                             new SimpleUriProvider(URL), SERVICE_NAME, CLIENT_ID);
+                                                             URI_PROVIDER, SERVICE_NAME, CLIENT_ID);
         HttpClient client = opowerClient.prepareHttpClient();
         PoolingClientConnectionManager connectionManager = (PoolingClientConnectionManager)client.getConnectionManager();
         assertThat(connectionManager.getMaxTotal(), is(THIRTY));
@@ -44,7 +46,7 @@ public class TestOpowerClient {
      */
     @Test
     public void adjustedHystrixThreadPoolSizeDictatesHttpClientPoolConfiguration() throws Exception {
-        OpowerClient opowerClient = new OpowerClient.Builder(FrobResource.class, new SimpleUriProvider(URL),
+        OpowerClient opowerClient = new OpowerClient.Builder(FrobResource.class, URI_PROVIDER,
                                                              SERVICE_NAME, CLIENT_ID);
         Method findFrob = FrobResource.class.getMethod("findFrob", String.class);
         opowerClient.methodThreadPoolProperties(findFrob, new ConfigurationCallback<HystrixThreadPoolProperties.Setter>() {
@@ -58,4 +60,5 @@ public class TestOpowerClient {
         assertThat(connectionManager.getMaxTotal(), is(THIRTY + 1));
         assertThat(connectionManager.getDefaultMaxPerRoute(), is(THIRTY + 1));
     }
+
 }
