@@ -39,6 +39,23 @@ public class TestOpowerResourceClass {
         new OpowerResourceInterface(InvalidResource.class);
     }
 
+    /**
+     * Make sure null for supporting packages throws.
+     */
+    @Test(expected = NullPointerException.class)
+    public void nullSupportingPackagesThrows() {
+        new OpowerResourceInterface<>(ValidTestResource.class, null);
+
+    }
+
+    /**
+     * Make sure multiple nulls for supporting packages throws.
+     */
+    @Test(expected = NullPointerException.class)
+    public void multipleNullSupportingPackagesThrows() {
+        new OpowerResourceInterface<>(ValidTestResource.class, null, null);
+
+    }
 
     private interface InvalidResource {
         @GET

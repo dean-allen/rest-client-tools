@@ -17,6 +17,7 @@ import java.util.Deque;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Attempts to make sure that the interface used for clients only use a certain well defined set of packages.
@@ -48,12 +49,12 @@ public class OpowerResourceInterface<T> extends ResourceInterface<T> {
      * com.opower
      * 
      * Consider for an example that you're writing a User service. You have a UserResource interface that looks like this:
-     * 
+     *
      * package com.opower.service;
-     * 
+     *
      * import com.opower.model.user.CreateUserResponse;
      * import com.opower.model.user.CreateUserRequest;
-     * 
+     *
      * @Path("/users")
      * public interface UserResource {
      *      @PUT
@@ -63,13 +64,23 @@ public class OpowerResourceInterface<T> extends ResourceInterface<T> {
      * The interface and supporting request / response objects are all packaged together. The validation logic will automatically
      * trust all classes in the com.opower.service package (the package of the resource interface). But the supporting objects
      * are found in a separate package and so you must pass "com.opower.model.user" to the constructor so validation will succeed.
-     * 
+     *
      * @param resourceClass      the resource interface
      * @param supportingPackages Set of package names starting with com.opower that contain custom classes referenced
      *                           by the resource class outside of the resource class' package.
      */
     public OpowerResourceInterface(Class<T> resourceClass, String... supportingPackages) {
         super(resourceClass);
+
+        Set<String> packageSet = Sets.newHashSet(checkNotNull(supportingPackages));
+        checkArgument(Iterables.all(packageSet, new Predicate<String>() {
+                @Override
+                public boolean apply(String input) {
+                    checkNotNull(input, "Passing null for a supporting package is invalid.");
+                    return input.startsWith("com.opower") || input.startsWith("opower");
+                }
+            }
+        ));
 
         ImmutableSet.Builder<String> builder = ImmutableSet.builder();
         builder.add("org.joda.time");
@@ -82,16 +93,7 @@ public class OpowerResourceInterface<T> extends ResourceInterface<T> {
         builder.add("javax.validation");
         builder.add("org.hibernate.validator.constraints");
         builder.add("org.slf4j");
-
-        Set<String> packageSet = Sets.newHashSet(supportingPackages);
-        checkArgument(Iterables.all(packageSet, new Predicate<String>() {
-                @Override
-                public boolean apply(String input) {
-                    return input.startsWith("com.opower") || input.startsWith("opower");
-                }
-            }
-        ));
-
+        builder.add("com.opower.rest.params");
         builder.addAll(packageSet);
 
         this.supportedPackages = builder.build();

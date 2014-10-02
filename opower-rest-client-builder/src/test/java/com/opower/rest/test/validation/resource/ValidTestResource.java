@@ -6,6 +6,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.MatrixParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 
 /**
@@ -18,9 +19,10 @@ public interface ValidTestResource {
      * Dummy method annotated with a variety of jax-rs annotations so that validation will succeed.
      * @param work dummy param
      * @param otherParam dummy param
+     * @param dateTime dummy param
      * @return dummy return value.
      */
     @GET
     @Path("path")
-    ValidModel doWork(@PathParam("test") LocalDate work, @MatrixParam("test") Optional<String> otherParam);
+    ValidModel doWork(@PathParam("test") LocalDate work, @MatrixParam("test") Optional<String> otherParam, DateTime dateTime);
 }

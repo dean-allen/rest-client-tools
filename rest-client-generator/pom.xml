@@ -35,6 +35,12 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.ning</groupId>
+            <artifactId>async-http-client</artifactId>
+            <version>1.8.8</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>com.opower</groupId>
             <artifactId>rest-client-test</artifactId>
             <version>${project.version}</version>
