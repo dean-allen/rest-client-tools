@@ -5,7 +5,6 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 import com.opower.rest.client.generator.core.ResourceInterface;
 
 import java.lang.annotation.Annotation;
@@ -14,7 +13,10 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -22,57 +24,63 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Attempts to make sure that the interface used for clients only use a certain well defined set of packages.
  *
+ * These are the packages that are approved for use in resource interfaces. Classes from any other packages will generate
+ * a warning at runtime. We can also not guarantee a solution if your resource interface ignores these warnings and you have
+ * problems later.
+ *
+ *   org.joda.time
+ *   javax.ws.rs.core
+ *   javax.ws.rs
+ *   com.google.common
+ *   org.apache.avro
+ *   org.codehaus.jackson
+ *   com.fasterxml.jackson.annotation
+ *   com.fasterxml.jackson.databind.annotation
+ *   javax.annotation
+ *   javax.validation
+ *   org.hibernate.validator.constraints
+ *   org.slf4j
+ *   com.opower.rest.params
+ *
  * @param <T> the type of the resource interface
  * @author chris.phillips
  */
-public class OpowerResourceInterface<T> extends ResourceInterface<T> {
+public final class OpowerResourceInterface<T> extends ResourceInterface<T> {
 
     private static final int MAX_CLASS_CACHE = 300;
     private static final Cache<Class<?>, Boolean> VALIDATED_CLASSES = CacheBuilder.newBuilder()
                                                                                   .maximumSize(MAX_CLASS_CACHE)
                                                                                   .build();
+    private static final Logger LOG = LoggerFactory.getLogger(OpowerResourceInterface.class);
 
     private final Set<String> supportedPackages;
 
     /**
-     * Use this constructor if all the supporting classes for your interface are in the same package as the interface.
+     * Creates an OpowerResourceInterface instance based on the supplied resource interface class.
      *
      * @param resourceClass the resource interface
      */
     public OpowerResourceInterface(Class<T> resourceClass) {
-        this(resourceClass, resourceClass.getPackage().getName());
+        this(resourceClass, ImmutableSet.<String>of());
     }
 
     /**
      * This constructor allows other supporting packages to be accepted when validating the resource. This is useful if
-     * you have put dependent classes for your resource interface in different packages. Supporting packages must start with
-     * com.opower
+     * you have put dependent classes for your resource interface in different packages. You will receive a stern warning for
+     * any classes that you use on your resource interface that are not included in the artifacts listed in rest-interface-base.
      * 
-     * Consider for an example that you're writing a User service. You have a UserResource interface that looks like this:
-     *
-     * package com.opower.service;
-     *
-     * import com.opower.model.user.CreateUserResponse;
-     * import com.opower.model.user.CreateUserRequest;
-     *
-     * @Path("/users")
-     * public interface UserResource {
-     *      @PUT
-     *      CreateUserResponse createUser(CreateUserRequest request);
-     * }
-     *
-     * The interface and supporting request / response objects are all packaged together. The validation logic will automatically
-     * trust all classes in the com.opower.service package (the package of the resource interface). But the supporting objects
-     * are found in a separate package and so you must pass "com.opower.model.user" to the constructor so validation will succeed.
-     *
      * @param resourceClass      the resource interface
-     * @param supportingPackages Set of package names starting with com.opower that contain custom classes referenced
+     * @param modelPackages Set of package names starting with opower or com.opower that contain custom classes referenced
      *                           by the resource class outside of the resource class' package.
      */
-    public OpowerResourceInterface(Class<T> resourceClass, String... supportingPackages) {
+    public OpowerResourceInterface(Class<T> resourceClass, String... modelPackages) {
+        this(resourceClass, ImmutableSet.copyOf(modelPackages));
+    }
+
+    private OpowerResourceInterface(Class<T> resourceClass, Set<String> modelPackages) {
         super(resourceClass);
 
-        Set<String> packageSet = Sets.newHashSet(checkNotNull(supportingPackages));
+        Set<String> packageSet = new HashSet<>(checkNotNull(modelPackages));
         checkArgument(Iterables.all(packageSet, new Predicate<String>() {
                 @Override
                 public boolean apply(String input) {
@@ -80,13 +88,15 @@ public class OpowerResourceInterface<T> extends ResourceInterface<T> {
                     return input.startsWith("com.opower") || input.startsWith("opower");
                 }
             }
-        ));
+        ), "supportingPackages must only contain packages that start with opower or com.opower");
 
         ImmutableSet.Builder<String> builder = ImmutableSet.builder();
         builder.add("org.joda.time");
         builder.add("javax.ws.rs.core");
         builder.add("javax.ws.rs");
         builder.add("com.google.common");
+        builder.add("org.apache.avro");
+        builder.add("org.codehaus.jackson");
         builder.add("com.fasterxml.jackson.annotation");
         builder.add("com.fasterxml.jackson.databind.annotation");
         builder.add("javax.annotation");
@@ -94,6 +104,7 @@ public class OpowerResourceInterface<T> extends ResourceInterface<T> {
         builder.add("org.hibernate.validator.constraints");
         builder.add("org.slf4j");
         builder.add("com.opower.rest.params");
+        builder.add(resourceClass.getPackage().getName());
         builder.addAll(packageSet);
 
         this.supportedPackages = builder.build();
@@ -170,13 +181,17 @@ public class OpowerResourceInterface<T> extends ResourceInterface<T> {
     }
 
     private void checkClass(final Class<?> toCheck) {
-        checkArgument(Iterables.any(this.supportedPackages, new Predicate<String>() {
-                @Override
-                public boolean apply(String supportedPackage) {
-                    return toCheck.getPackage().getName().startsWith(supportedPackage);
-                }
-            }),
-                      String.format("Type %s is not supported", toCheck.getCanonicalName()));
+        Predicate<String> isClassToCheckInPackage = new Predicate<String>() {
+            @Override
+            public boolean apply(String supportedPackage) {
+                return toCheck.getPackage().getName().startsWith(supportedPackage);
+            }
+        };
+
+        if (!Iterables.any(this.supportedPackages, isClassToCheckInPackage)) {
+            LOG.warn("You are using a potentially unsafe type that may cause classpath conflicts!! [ {} ]",
+                     toCheck.getCanonicalName());
+        }
     }
 
     private void checkClassAnnotations(Class<?> toCheck, Deque<Class<?>> validationWork) {
