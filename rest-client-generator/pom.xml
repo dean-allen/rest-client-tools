@@ -6,7 +6,7 @@
     <parent>
         <artifactId>rest-client-tools</artifactId>
         <groupId>com.opower</groupId>
-        <version>1.0.7-SNAPSHOT</version>
+        <version>1.0.7</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
