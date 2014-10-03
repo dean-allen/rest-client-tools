@@ -14,7 +14,7 @@ public class IntervalParam extends AbstractParam<Interval> {
      *
      * @param input an input value from a client request
      */
-    protected IntervalParam(String input) {
+    public IntervalParam(String input) {
         super(input);
     }
 
