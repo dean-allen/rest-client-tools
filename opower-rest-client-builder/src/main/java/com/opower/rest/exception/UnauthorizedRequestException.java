@@ -2,7 +2,7 @@ package com.opower.rest.exception;
 
 
 /**
- * Represents a 500 HTTP Response.
+ * Represents a 401 HTTP Response.
  *
  * @author matthew.greenfield@opower.com
  */
@@ -14,7 +14,7 @@ public class UnauthorizedRequestException extends ErrorResponseException {
      * Constructor that passes 401 to super.
      */
     public UnauthorizedRequestException() {
-        super(SC_BAD_REQUEST);
+        super(SC_UNAUTHORIZED);
     }
 
     /**
