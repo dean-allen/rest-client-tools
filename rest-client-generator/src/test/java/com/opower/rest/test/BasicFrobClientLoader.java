@@ -34,7 +34,7 @@ public class BasicFrobClientLoader implements FrobClientLoader {
         try {
             Client.Builder<FrobResource> clientBuilder = new Client.Builder<>(new ResourceInterface<>(FrobResource.class),
                     new SimpleUriProvider(String.format("http://localhost:%s/", port)))
-                    .executor(new ApacheHttpClient4Executor()).messageBodyProviders(JACKSON_JSON_PROVIDER, JACKSON_JSON_PROVIDER);
+                    .executor(new ApacheHttpClient4Executor()).registerProviderInstance(JACKSON_JSON_PROVIDER);
             return ImmutableMap.of("default", clientBuilder.build());
         } catch (Exception ex) {
             throw Throwables.propagate(ex);

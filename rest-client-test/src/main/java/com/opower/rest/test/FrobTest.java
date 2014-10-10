@@ -5,8 +5,6 @@ import com.opower.rest.test.resource.FrobClientRule;
 import com.opower.rest.test.resource.FrobResource;
 import com.opower.rest.test.resource.MavenVersionLoader;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 import javax.ws.rs.core.Response;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -60,7 +58,7 @@ public abstract class FrobTest {
      */
     @Test
     public void testGet() {
-        testClients(CLIENT_RULE.getClientsToTest(PORT, this.type).entrySet(), new FrobTester() {
+        testClients(new FrobTester() {
             @Override
             public void doTest(FrobResource frobResource) {
                 Frob f = frobResource.findFrob(TEST_ID);
@@ -74,7 +72,7 @@ public abstract class FrobTest {
      */
     @Test
     public void testPOSTWithFormParam() {
-        testClients(CLIENT_RULE.getClientsToTest(PORT, this.type).entrySet(), new FrobTester() {
+        testClients(new FrobTester() {
             @Override
             public void doTest(FrobResource frobResource) {
                 Frob f = frobResource.updateFrob(TEST_ID, "newName");
@@ -89,7 +87,7 @@ public abstract class FrobTest {
      */
     @Test
     public void testCreate() {
-        testClients(CLIENT_RULE.getClientsToTest(PORT, this.type).entrySet(), new FrobTester() {
+        testClients(new FrobTester() {
             @Override
             public void doTest(FrobResource frobResource) {
                 Response response = frobResource.createFrob(new Frob("testCreate"));
@@ -98,8 +96,22 @@ public abstract class FrobTest {
         });
     }
 
-    private void testClients(Set<Entry<String, FrobResource>> clients, FrobTester tester) {
-        for (Map.Entry<String, FrobResource> entry : clients) {
+    /**
+     * Exercises the frobString method.
+     */
+    @Test
+    public void testFrobString() {
+        testClients(new FrobTester() {
+            @Override
+            public void doTest(FrobResource frobResource) {
+                String echo = frobResource.frobString("hello!");
+                Assert.assertThat(echo, is("You sent hello!"));
+            }
+        });
+    }
+
+    private void testClients(FrobTester tester) {
+        for (Map.Entry<String, FrobResource> entry : CLIENT_RULE.getClientsToTest(PORT, this.type).entrySet()) {
             LOG.info("Testing client: " + entry.getKey());
             tester.doTest(entry.getValue());
         }

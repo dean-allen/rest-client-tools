@@ -1,11 +1,15 @@
 package com.opower.rest.client.generator.util;
 
+import com.opower.rest.client.generator.specimpl.MultivaluedMapImpl;
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.ws.rs.core.MultivaluedMap;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -287,6 +291,33 @@ public class Encode {
         String result = encodeFromArray(segment, queryNameValueEncoding, false);
         result = encodeNonCodes(result);
         return result;
+    }
+    
+     /**
+     * decode an encoded map
+     *
+     * @param map
+     * @return
+     */
+    public static MultivaluedMap<String, String> decode(MultivaluedMap<String, String> map)
+    {
+        MultivaluedMapImpl<String, String> decoded = new MultivaluedMapImpl<String, String>();
+        for (Map.Entry<String, List<String>> entry : map.entrySet())
+        {
+            List<String> values = entry.getValue();
+            for (String value : values)
+            {
+                try
+                {
+                    decoded.add(URLDecoder.decode(entry.getKey(), UTF_8), URLDecoder.decode(value, UTF_8));
+                }
+                catch (UnsupportedEncodingException e)
+                {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        return decoded;
     }
 
     protected static String encodeFromArray(String segment, String[] encodingMap, boolean encodePercent) {

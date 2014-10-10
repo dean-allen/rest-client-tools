@@ -49,4 +49,9 @@ public class FrobServerResource implements FrobResource {
         FROBS.put(frob.getId(), frob);
         return Response.ok().build();
     }
+
+    @Override
+    public String frobString(String echo) {
+        return String.format("You sent %s", echo);
+    }
 }

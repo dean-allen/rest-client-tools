@@ -380,7 +380,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
                                                                                      AUTH_SERVICE_NAME),
                                                                              new AuthorizationClientRequestFilter(
                                                                                      this.authorizationCredentials.get()))))
-                    .messageBodyProviders(this.jacksonJsonProvider, this.jacksonJsonProvider)
+                    .registerProviderInstance(this.jacksonJsonProvider)
                     .build();
 
             addClientRequestFilter(
@@ -428,7 +428,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
 
         super.executor(new ApacheHttpClient4Executor(prepareHttpClient(), this.clientRequestFilters))
              .clientErrorInterceptors(this.clientErrorInterceptors)
-             .messageBodyProviders(this.jacksonJsonProvider, this.jacksonJsonProvider);
+             .registerProviderInstance(this.jacksonJsonProvider);
 
         return configureMetrics(super.build());
 

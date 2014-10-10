@@ -49,7 +49,7 @@ public class HystrixFrobClientLoader implements FrobClientLoader {
                             setter.withExecutionIsolationThreadTimeoutInMilliseconds(TEN_SECONDS);
                         }
                     })
-                    .messageBodyProviders(JACKSON_JSON_PROVIDER, JACKSON_JSON_PROVIDER);
+                    .registerProviderInstance(JACKSON_JSON_PROVIDER);
 
             return ImmutableMap.of("default", clientBuilder.build());
         } catch (Exception ex) {

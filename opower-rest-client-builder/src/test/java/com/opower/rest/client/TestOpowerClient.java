@@ -7,6 +7,7 @@ import com.opower.rest.test.resource.FrobResource;
 import java.lang.reflect.Method;
 import org.apache.http.client.HttpClient;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.is;
@@ -18,12 +19,22 @@ import static org.junit.Assert.assertThat;
  */
 public class TestOpowerClient {
 
-    private static final int THIRTY = 30;
+    private static final int TEN = 10;
+    private static final int NUM_METHODS = FrobResource.class.getDeclaredMethods().length;
+    private static final int EXPECTED_POOL_SIZE = NUM_METHODS * TEN;
     private static final int ELEVEN = 11;
     private static final String URL = "http://localhost";
     private static final String SERVICE_NAME = "test-v1";
     private static final String CLIENT_ID = "test-client-id";
     private static final UriProvider URI_PROVIDER = new SimpleUriProvider(URL);
+
+    /**
+     * Initializes the system property to ensure the RuntimeDelegate gets properly loaded.
+     */
+    @BeforeClass
+    public static void init() {
+        System.setProperty("javax.ws.rs.ext.RuntimeDelegate","com.opower.rest.client.generator.core.BasicRuntimeDelegate");
+    }
     /**
      * By default each hystrixcommand gets its own thread pool with a core size of 10. The connection pool for the httpclient
      * shoudl have 10 * the number of methods on the resource interface by default; That ensures it can handle the max number of
@@ -35,8 +46,8 @@ public class TestOpowerClient {
                                                              URI_PROVIDER, SERVICE_NAME, CLIENT_ID);
         HttpClient client = opowerClient.prepareHttpClient();
         PoolingClientConnectionManager connectionManager = (PoolingClientConnectionManager)client.getConnectionManager();
-        assertThat(connectionManager.getMaxTotal(), is(THIRTY));
-        assertThat(connectionManager.getDefaultMaxPerRoute(), is(THIRTY));
+        assertThat(connectionManager.getMaxTotal(), is(EXPECTED_POOL_SIZE));
+        assertThat(connectionManager.getDefaultMaxPerRoute(), is(EXPECTED_POOL_SIZE));
     }
 
     /**
@@ -57,8 +68,8 @@ public class TestOpowerClient {
         });
         HttpClient client = opowerClient.prepareHttpClient();
         PoolingClientConnectionManager connectionManager = (PoolingClientConnectionManager)client.getConnectionManager();
-        assertThat(connectionManager.getMaxTotal(), is(THIRTY + 1));
-        assertThat(connectionManager.getDefaultMaxPerRoute(), is(THIRTY + 1));
+        assertThat(connectionManager.getMaxTotal(), is(EXPECTED_POOL_SIZE + 1));
+        assertThat(connectionManager.getDefaultMaxPerRoute(), is(EXPECTED_POOL_SIZE + 1));
     }
 
 }

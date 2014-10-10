@@ -28,7 +28,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public abstract class Client<T, B extends Client<T, B>> {
 
     protected ClientExecutor executor;
-    protected Providers providers;
+    protected ClientProviders providers = new ClientProviders();
     protected List<ClientErrorInterceptor> clientErrorInterceptors;
     protected final ResourceInterface<T> resourceInterface;
     protected final UriProvider uriProvider;
@@ -53,33 +53,9 @@ public abstract class Client<T, B extends Client<T, B>> {
     }
 
     @SuppressWarnings("unchecked")
-    public B messageBodyProviders(MessageBodyReader messageBodyReader, MessageBodyWriter messageBodyWriter) {
-        this.providers = buildProviders(messageBodyReader, messageBodyWriter);
+    public B registerProviderInstance(Object provider) {
+        this.providers.registerProviderInstance(provider);
         return (B) this;
-    }
-
-    private Providers buildProviders(final MessageBodyReader messageBodyReader, final MessageBodyWriter messageBodyWriter) {
-        return  new Providers() {
-            @Override
-            public <MBR> MessageBodyReader<MBR> getMessageBodyReader(Class<MBR> tClass, Type type, Annotation[] annotations, MediaType mediaType) {
-                return messageBodyReader.isReadable(tClass, type, annotations, mediaType) ? messageBodyReader : null;
-            }
-
-            @Override
-            public <MBW> MessageBodyWriter<MBW> getMessageBodyWriter(Class<MBW> tClass, Type type, Annotation[] annotations, MediaType mediaType) {
-                return messageBodyWriter.isWriteable(tClass, type, annotations, mediaType) ? messageBodyWriter : null;
-            }
-
-            @Override
-            public <EM extends Throwable> ExceptionMapper<EM> getExceptionMapper(Class<EM> tClass) {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public <R> ContextResolver<R> getContextResolver(Class<R> tClass, MediaType mediaType) {
-                throw new UnsupportedOperationException();
-            }
-        };
     }
 
     public T build() {
