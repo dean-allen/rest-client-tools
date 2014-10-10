@@ -15,13 +15,12 @@ import javax.ws.rs.ext.MessageBodyWriter;
 import javax.ws.rs.ext.Providers;
 
 /**
- * @author chris.phillips
+ * Extracted from ResteasyProviderFactory in Resteasy 2.3.4.Final.
  */
 public class ClientProviders implements Providers {
 
     protected MediaTypeMap<SortedKey<MessageBodyReader>> messageBodyReaders = new MediaTypeMap<>();
     protected MediaTypeMap<SortedKey<MessageBodyWriter>> messageBodyWriters = new MediaTypeMap<>();
-
 
     public ClientProviders() {
         // register the builtins
@@ -38,10 +37,8 @@ public class ClientProviders implements Providers {
                                                          MediaType mediaType) {
         List<SortedKey<MessageBodyReader>> readers = messageBodyReaders.getPossible(mediaType, type);
 
-        for (SortedKey<MessageBodyReader> reader : readers)
-        {
-            if (reader.obj.isReadable(type, genericType, annotations, mediaType))
-            {
+        for (SortedKey<MessageBodyReader> reader : readers) {
+            if (reader.obj.isReadable(type, genericType, annotations, mediaType)) {
                 return (MessageBodyReader<T>) reader.obj;
             }
         }
@@ -55,10 +52,8 @@ public class ClientProviders implements Providers {
                                                          Annotation[] annotations,
                                                          MediaType mediaType) {
         List<SortedKey<MessageBodyWriter>> writers = messageBodyWriters.getPossible(mediaType, type);
-        for (SortedKey<MessageBodyWriter> writer : writers)
-        {
-            if (writer.obj.isWriteable(type, genericType, annotations, mediaType))
-            {
+        for (SortedKey<MessageBodyWriter> writer : writers) {
+            if (writer.obj.isWriteable(type, genericType, annotations, mediaType)) {
                 return (MessageBodyWriter<T>) writer.obj;
             }
         }
@@ -171,16 +166,13 @@ public class ClientProviders implements Providers {
     {
         SortedKey<MessageBodyReader> key = new SortedKey<>(MessageBodyReader.class, provider, providerClass, isBuiltin);
         Consumes consumeMime = provider.getClass().getAnnotation(Consumes.class);
-        if (consumeMime != null)
-        {
-            for (String consume : consumeMime.value())
-            {
+        if (consumeMime != null) {
+            for (String consume : consumeMime.value()) {
                 MediaType mime = MediaType.valueOf(consume);
                 messageBodyReaders.add(mime, key);
             }
         }
-        else
-        {
+        else {
             messageBodyReaders.add(new MediaType("*", "*"), key);
         }
     }
@@ -197,16 +189,13 @@ public class ClientProviders implements Providers {
     {
         Produces consumeMime = provider.getClass().getAnnotation(Produces.class);
         SortedKey<MessageBodyWriter> key = new SortedKey<>(MessageBodyWriter.class, provider, providerClass, isBuiltin);
-        if (consumeMime != null)
-        {
-            for (String consume : consumeMime.value())
-            {
+        if (consumeMime != null) {
+            for (String consume : consumeMime.value()) {
                 MediaType mime = MediaType.valueOf(consume);
                 messageBodyWriters.add(mime, key);
             }
         }
-        else
-        {
+        else {
             messageBodyWriters.add(new MediaType("*", "*"), key);
         }
     }

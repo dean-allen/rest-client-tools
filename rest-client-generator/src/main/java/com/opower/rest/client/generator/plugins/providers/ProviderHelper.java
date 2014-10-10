@@ -20,7 +20,7 @@ import javax.ws.rs.core.Variant.VariantListBuilder;
 
 /**
  * A utility class to provide supporting functionality to various
- * entity providers.
+ * entity clientProviders.
  *
  * @author <a href="ryan@damnhandy.com>Ryan J. McDonough</a>
  * @version $Revision: $

@@ -20,6 +20,7 @@ public class DefaultEntityExtractorFactory implements EntityExtractorFactory {
    {
       public ClientResponse extractEntity(ClientRequestContext context, Object... args)
       {
+         context.getClientResponse().setReturnType(Response.class);
          return context.getClientResponse();
       }
    };

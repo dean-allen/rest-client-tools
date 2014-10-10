@@ -1,9 +1,15 @@
 package com.opower.rest.test;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Throwables;
+import com.google.common.io.CharStreams;
 import com.opower.rest.test.resource.Frob;
 import com.opower.rest.test.resource.FrobClientRule;
 import com.opower.rest.test.resource.FrobResource;
 import com.opower.rest.test.resource.MavenVersionLoader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Map;
 import javax.ws.rs.core.Response;
 import org.junit.Assert;
@@ -92,6 +98,12 @@ public abstract class FrobTest {
             public void doTest(FrobResource frobResource) {
                 Response response = frobResource.createFrob(new Frob("testCreate"));
                 Assert.assertThat(response.getStatus(), is(Response.Status.OK.getStatusCode()));
+                try {
+                    assertThat(CharStreams.toString(new InputStreamReader((InputStream) response.getEntity(),
+                                                                          Charsets.UTF_8)), is("success"));
+                } catch (IOException e) {
+                    Throwables.propagate(e);
+                }
             }
         });
     }

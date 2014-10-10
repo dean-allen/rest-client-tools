@@ -6,6 +6,7 @@ import com.opower.rest.client.generator.util.CaseInsensitiveMap;
 import com.opower.rest.client.generator.util.GenericType;
 import com.opower.rest.client.generator.util.HttpHeaderNames;
 import com.opower.rest.client.generator.util.HttpResponseCodes;
+import javax.ws.rs.core.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -179,12 +180,17 @@ public class BaseClientResponse<T> extends ClientResponse<T> {
     }
 
     @Override
-    public T getEntity() {
+    public Object getEntity() {
         if (this.returnType == null) {
             throw new RuntimeException(
                     "No type information to extract entity with, use other getEntity() methods");
         }
-        return (T) getEntity(this.returnType, this.genericReturnType, this.annotations);
+        // this seems like the best we can do. You get the InputStream from the response.
+        if (Response.class.isAssignableFrom(this.returnType)) {
+            return getEntity(InputStream.class, null, this.annotations);
+        } else {
+            return getEntity(this.returnType, this.genericReturnType, this.annotations);
+        }
     }
 
     @Override
