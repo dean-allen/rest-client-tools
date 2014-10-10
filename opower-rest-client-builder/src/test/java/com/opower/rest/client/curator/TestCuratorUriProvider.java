@@ -6,7 +6,9 @@ import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import static org.easymock.EasyMock.expect;
@@ -26,6 +28,9 @@ public class TestCuratorUriProvider extends EasyMockSupport {
     @Mock
     private ServiceInstance<Void> serviceInstance;
     private CuratorUriProvider curatorUriProvider;
+
+    @Rule
+    public ExpectedException testRuleExpectedException = ExpectedException.none();
 
     /**
      * Sets up the test fixture.
@@ -47,6 +52,21 @@ public class TestCuratorUriProvider extends EasyMockSupport {
         expect(this.serviceInstance.getPort()).andReturn(PORT);
         replayAll();
         assertThat(this.curatorUriProvider.getUri().toString(), is("http://test.com:8080"));
+        verifyAll();
     }
+
+    /**
+     * Verify that the service name is included in the error message.
+     */
+    @Test
+    public void verifyServiceNameInErrorMessage() throws Exception {
+        expect(this.serviceProvider.getInstance()).andReturn(null);
+        replayAll();
+        this.testRuleExpectedException.expect(NullPointerException.class);
+        this.testRuleExpectedException.expectMessage("No instances of test registered in Zookeeper");
+        this.curatorUriProvider.getUri();
+        verifyAll();
+    }
+
 
 }
