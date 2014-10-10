@@ -53,7 +53,7 @@ public class CuratorUriProvider implements UriProvider {
      * @return an address for a valid service instance we can connect to.
      */
     private URI createAddressFromInstance(ServiceInstance<Void> serviceInstance)  {
-        checkNotNull(serviceInstance, "No instances registered in Zookeeper");
+        checkNotNull(serviceInstance, "No instances of %s registered in Zookeeper", this.serviceName);
         // TODO: don't hard code http
         return URI.create(String.format("http://%s:%s", serviceInstance.getAddress(), serviceInstance.getPort()));
     }
