@@ -1,6 +1,5 @@
 package com.opower.rest.params;
 
-import com.opower.rest.params.AbstractParam.ErrorMessage;
 import java.util.UUID;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
@@ -46,10 +45,7 @@ public class TestUUIDParam {
             assertThat(response.getStatus())
                     .isEqualTo(Response.Status.BAD_REQUEST.getStatusCode());
 
-            ErrorMessage entity = (ErrorMessage) response.getEntity();
-            assertThat(entity.getCode()).isEqualTo(Response.Status.BAD_REQUEST.getStatusCode());
-            assertThat(entity.getMessage())
-                    .isEqualTo("\"foo\" is not a UUID.");
+            assertThat(e.getMessage()).isEqualTo("Invalid parameter: foo");
         }
     }
 }

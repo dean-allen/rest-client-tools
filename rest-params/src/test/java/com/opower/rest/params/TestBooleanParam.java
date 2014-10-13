@@ -1,7 +1,6 @@
 package com.opower.rest.params;
 
 
-import com.opower.rest.params.AbstractParam.ErrorMessage;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import org.junit.Test;
@@ -79,10 +78,7 @@ public class TestBooleanParam {
             assertThat(response.getStatus())
                     .isEqualTo(Response.Status.BAD_REQUEST.getStatusCode());
 
-            ErrorMessage entity = (ErrorMessage) response.getEntity();
-            assertThat(entity.getCode()).isEqualTo(Response.Status.BAD_REQUEST.getStatusCode());
-            assertThat(entity.getMessage())
-                    .isEqualTo("\"null\" must be \"true\" or \"false\".");
+            assertThat(e.getMessage()).isEqualTo("Invalid parameter: null");
         }
     }
 
@@ -102,10 +98,7 @@ public class TestBooleanParam {
             assertThat(response.getStatus())
                     .isEqualTo(Response.Status.BAD_REQUEST.getStatusCode());
 
-            ErrorMessage entity = (ErrorMessage) response.getEntity();
-            assertThat(entity.getCode()).isEqualTo(Response.Status.BAD_REQUEST.getStatusCode());
-            assertThat(entity.getMessage())
-                    .isEqualTo("\"foo\" must be \"true\" or \"false\".");
+            assertThat(e.getMessage()).isEqualTo("Invalid parameter: foo");
         }
     }
 }
