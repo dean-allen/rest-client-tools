@@ -24,13 +24,14 @@ public class TestCuratorUriProvider extends EasyMockSupport {
 
     private static final int PORT = 8080;
 
+    @Rule
+    public ExpectedException testRuleExpectedException = ExpectedException.none();
+
     private ServiceProvider<Void> serviceProvider;
     @Mock
     private ServiceInstance<Void> serviceInstance;
     private CuratorUriProvider curatorUriProvider;
 
-    @Rule
-    public ExpectedException testRuleExpectedException = ExpectedException.none();
 
     /**
      * Sets up the test fixture.
@@ -57,6 +58,7 @@ public class TestCuratorUriProvider extends EasyMockSupport {
 
     /**
      * Verify that the service name is included in the error message.
+     * @throws java.lang.Exception for convenience
      */
     @Test
     public void verifyServiceNameInErrorMessage() throws Exception {
