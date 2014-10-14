@@ -16,3 +16,17 @@ OpowerClientBuilder constructor. I think we need to make it easy to access a sin
 that corresponds to a singleton CuratorFramework instance. Then the CuratorServiceRegistry can take in its constructor an
 already started CuratorFramework instance and focus only on the register/ unregister part. I think that will make us happier
 in the long run.
+
+
+#### Mappings provided by ExceptionMapperInterceptor :
+
+| org.apache.http.HttpStatus | Numeric | com.opower.rest.exception class |
+|:---------------------------|:--------|:----------|
+| SC_BAD_REQUEST | 400 | BadRequestException |
+| SC_FORBIDDEN   | 403 | ForbiddenException |
+| SC_NOT_FOUND   | 404 | NotFoundException |
+| SC_GONE        | 410 | GoneException |
+| SC_INTERNAL_SERVER_ERROR | 500 | InternalServerErrorException |
+| SC_SERVICE_UNAVAILABLE | 503 | ServiceUnavailableException |
+| SC_UNAUTHORIZED | 401 | UnauthorizedRequestException |
+
