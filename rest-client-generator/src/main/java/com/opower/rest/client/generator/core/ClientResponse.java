@@ -34,7 +34,7 @@ public abstract class ClientResponse<T> extends Response {
      *
      * @return
      */
-    public abstract T getEntity();
+    public abstract Object getEntity();
 
     /**
      * Extract the response body with the provided type information

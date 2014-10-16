@@ -8,6 +8,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -50,5 +51,14 @@ public interface FrobResource {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
     Response createFrob(Frob frob);
+    
+    /**
+     * Makes sure we can return simple strings.
+     * @param echo the string to echo
+     * @return String.format("You sent %s", echo)
+     */
+    @GET
+    @Produces(MediaType.TEXT_PLAIN)
+    String frobString(@QueryParam("echo")String echo);
 
 }

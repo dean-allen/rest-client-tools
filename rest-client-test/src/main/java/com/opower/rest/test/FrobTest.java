@@ -1,12 +1,16 @@
 package com.opower.rest.test;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Throwables;
+import com.google.common.io.CharStreams;
 import com.opower.rest.test.resource.Frob;
 import com.opower.rest.test.resource.FrobClientRule;
 import com.opower.rest.test.resource.FrobResource;
 import com.opower.rest.test.resource.MavenVersionLoader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 import javax.ws.rs.core.Response;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -60,7 +64,7 @@ public abstract class FrobTest {
      */
     @Test
     public void testGet() {
-        testClients(CLIENT_RULE.getClientsToTest(PORT, this.type).entrySet(), new FrobTester() {
+        testClients(new FrobTester() {
             @Override
             public void doTest(FrobResource frobResource) {
                 Frob f = frobResource.findFrob(TEST_ID);
@@ -74,7 +78,7 @@ public abstract class FrobTest {
      */
     @Test
     public void testPOSTWithFormParam() {
-        testClients(CLIENT_RULE.getClientsToTest(PORT, this.type).entrySet(), new FrobTester() {
+        testClients(new FrobTester() {
             @Override
             public void doTest(FrobResource frobResource) {
                 Frob f = frobResource.updateFrob(TEST_ID, "newName");
@@ -89,17 +93,37 @@ public abstract class FrobTest {
      */
     @Test
     public void testCreate() {
-        testClients(CLIENT_RULE.getClientsToTest(PORT, this.type).entrySet(), new FrobTester() {
+        testClients(new FrobTester() {
             @Override
             public void doTest(FrobResource frobResource) {
                 Response response = frobResource.createFrob(new Frob("testCreate"));
                 Assert.assertThat(response.getStatus(), is(Response.Status.OK.getStatusCode()));
+                try {
+                    assertThat(CharStreams.toString(new InputStreamReader((InputStream) response.getEntity(),
+                                                                          Charsets.UTF_8)), is("success"));
+                } catch (IOException e) {
+                    Throwables.propagate(e);
+                }
             }
         });
     }
 
-    private void testClients(Set<Entry<String, FrobResource>> clients, FrobTester tester) {
-        for (Map.Entry<String, FrobResource> entry : clients) {
+    /**
+     * Exercises the frobString method.
+     */
+    @Test
+    public void testFrobString() {
+        testClients(new FrobTester() {
+            @Override
+            public void doTest(FrobResource frobResource) {
+                String echo = frobResource.frobString("hello!");
+                Assert.assertThat(echo, is("You sent hello!"));
+            }
+        });
+    }
+
+    private void testClients(FrobTester tester) {
+        for (Map.Entry<String, FrobResource> entry : CLIENT_RULE.getClientsToTest(PORT, this.type).entrySet()) {
             LOG.info("Testing client: " + entry.getKey());
             tester.doTest(entry.getValue());
         }

@@ -2,20 +2,12 @@ package com.opower.rest.client.generator.core;
 
 import com.opower.rest.client.generator.extractors.DefaultEntityExtractorFactory;
 import com.opower.rest.client.generator.util.IsHttpMethod;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import javax.ws.rs.Path;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.ext.ContextResolver;
-import javax.ws.rs.ext.ExceptionMapper;
-import javax.ws.rs.ext.MessageBodyReader;
-import javax.ws.rs.ext.MessageBodyWriter;
-import javax.ws.rs.ext.Providers;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -28,7 +20,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public abstract class Client<T, B extends Client<T, B>> {
 
     protected ClientExecutor executor;
-    protected Providers providers;
+    protected ClientProviders clientProviders = new ClientProviders();
     protected List<ClientErrorInterceptor> clientErrorInterceptors;
     protected final ResourceInterface<T> resourceInterface;
     protected final UriProvider uriProvider;
@@ -53,42 +45,18 @@ public abstract class Client<T, B extends Client<T, B>> {
     }
 
     @SuppressWarnings("unchecked")
-    public B messageBodyProviders(MessageBodyReader messageBodyReader, MessageBodyWriter messageBodyWriter) {
-        this.providers = buildProviders(messageBodyReader, messageBodyWriter);
+    public B registerProviderInstance(Object provider) {
+        this.clientProviders.registerProviderInstance(provider);
         return (B) this;
-    }
-
-    private Providers buildProviders(final MessageBodyReader messageBodyReader, final MessageBodyWriter messageBodyWriter) {
-        return  new Providers() {
-            @Override
-            public <MBR> MessageBodyReader<MBR> getMessageBodyReader(Class<MBR> tClass, Type type, Annotation[] annotations, MediaType mediaType) {
-                return messageBodyReader.isReadable(tClass, type, annotations, mediaType) ? messageBodyReader : null;
-            }
-
-            @Override
-            public <MBW> MessageBodyWriter<MBW> getMessageBodyWriter(Class<MBW> tClass, Type type, Annotation[] annotations, MediaType mediaType) {
-                return messageBodyWriter.isWriteable(tClass, type, annotations, mediaType) ? messageBodyWriter : null;
-            }
-
-            @Override
-            public <EM extends Throwable> ExceptionMapper<EM> getExceptionMapper(Class<EM> tClass) {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public <R> ContextResolver<R> getContextResolver(Class<R> tClass, MediaType mediaType) {
-                throw new UnsupportedOperationException();
-            }
-        };
     }
 
     public T build() {
         if (this.executor == null)
             throw new IllegalArgumentException("You must provide a ClientExecutor");
-        if (this.providers == null)
+        if (this.clientProviders == null)
             throw new IllegalArgumentException("can't have null Providers");
 
-        final ProxyConfig config = new ProxyConfig(this.loader, this.executor, this.providers, new DefaultEntityExtractorFactory(),
+        final ProxyConfig config = new ProxyConfig(this.loader, this.executor, this.clientProviders, new DefaultEntityExtractorFactory(),
                                                    this.clientErrorInterceptors);
         return createProxy(this.resourceInterface.getInterface(), this.uriProvider, config);
     }

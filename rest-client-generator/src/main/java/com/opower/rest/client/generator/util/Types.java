@@ -78,6 +78,86 @@ public class Types {
 
         return recurseSuperclassForInterface(searchedForInterface, typeVarMap, genericSuper, superclass);
     }
+    
+    public static Class getTemplateParameterOfInterface(Class base, Class desiredInterface)
+    {
+        Object rtn = getSomething(base, desiredInterface);
+        if (rtn != null && rtn instanceof Class) return (Class) rtn;
+        return null;
+    }
+
+    private static Object getSomething(Class base, Class desiredInterface)
+    {
+        for (int i = 0; i < base.getInterfaces().length; i++)
+        {
+            Class intf = base.getInterfaces()[i];
+            if (intf.equals(desiredInterface))
+            {
+                Type generic = base.getGenericInterfaces()[i];
+                if (generic instanceof ParameterizedType)
+                {
+                    ParameterizedType p = (ParameterizedType) generic;
+                    Type type = p.getActualTypeArguments()[0];
+                    Class rtn = getRawTypeNoException(type);
+                    if (rtn != null) return rtn;
+                    return type;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+        }
+        if (base.getSuperclass() == null || base.getSuperclass().equals(Object.class)) return null;
+        Object rtn = getSomething(base.getSuperclass(), desiredInterface);
+        if (rtn == null || rtn instanceof Class) return rtn;
+        if (!(rtn instanceof TypeVariable)) return null;
+
+        String name = ((TypeVariable) rtn).getName();
+        int index = -1;
+        TypeVariable[] variables = base.getSuperclass().getTypeParameters();
+        if (variables == null || variables.length < 1) return null;
+
+        for (int i = 0; i < variables.length; i++)
+        {
+            if (variables[i].getName().equals(name)) index = i;
+        }
+        if (index == -1) return null;
+
+
+        Type genericSuperclass = base.getGenericSuperclass();
+        if (!(genericSuperclass instanceof ParameterizedType)) return null;
+
+        ParameterizedType pt = (ParameterizedType) genericSuperclass;
+        Type type = pt.getActualTypeArguments()[index];
+
+        Class clazz = getRawTypeNoException(type);
+        if (clazz != null) return clazz;
+        return type;
+    }
+
+    public static Class<?> getRawTypeNoException(Type type)
+    {
+        if (type instanceof Class<?>)
+        {
+            // type is a normal class.
+            return (Class<?>) type;
+
+        }
+        else if (type instanceof ParameterizedType)
+        {
+            ParameterizedType parameterizedType = (ParameterizedType) type;
+            Type rawType = parameterizedType.getRawType();
+            return (Class<?>) rawType;
+        }
+        else if (type instanceof GenericArrayType)
+        {
+            final GenericArrayType genericArrayType = (GenericArrayType) type;
+            final Class<?> componentRawType = getRawType(genericArrayType.getGenericComponentType());
+            return Array.newInstance(componentRawType, 0).getClass();
+        }
+        return null;
+    }
 
     private static Type[] recurseSuperclassForInterface(Class<?> searchedForInterface, Map<String, Type> typeVarMap, Type genericSub, Class<?> sub) {
         if (genericSub instanceof ParameterizedType) {
