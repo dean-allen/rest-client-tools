@@ -13,6 +13,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
+import com.netflix.hystrix.HystrixCommandProperties;
 import com.netflix.hystrix.HystrixThreadPoolProperties;
 import com.netflix.hystrix.strategy.HystrixPlugins;
 import com.opower.auth.resources.oauth2.AccessTokenResource;
@@ -35,7 +36,10 @@ import com.opower.rest.client.generator.executors.ApacheHttpClient4Executor;
 import com.opower.rest.client.generator.hystrix.HystrixClient;
 import com.opower.rest.client.http.ExponentialRetryStrategy;
 import com.opower.rest.client.hystrix.OpowerEventNotifier;
+import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.AutoRetryHttpClient;
@@ -347,14 +351,21 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
         poolingClientConnectionManager.setMaxTotal(totalSize);
         poolingClientConnectionManager.setDefaultMaxPerRoute(totalSize);
 
-        AutoRetryHttpClient client =
-                new org.apache.http.impl.client.AutoRetryHttpClient(
-                        new DefaultHttpClient(poolingClientConnectionManager),
-                        this.retryStrategy);
+        AutoRetryHttpClient client = new AutoRetryHttpClient(
+                new DefaultHttpClient(poolingClientConnectionManager),
+                this.retryStrategy);
         if (this.httpClientParams.isPresent()) {
             this.httpClientParams.get().configure(client.getParams());
         }
         return client;
+    }
+
+    /**
+     * Visible for testing.
+     * @return the Map of methods to HystrixCommandProperties.Setter
+     */
+    Map<Method, HystrixCommandProperties.Setter> getCommandPropertiesMap() {
+        return this.commandPropertiesMap;
     }
 
     private void setUpAuthorization() {
@@ -418,6 +429,26 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     }
 
     /**
+     * Visible for testing.
+     */
+    void hystrixCommandTimeout() {
+
+        commandProperties(new ConfigurationCallback<HystrixCommandProperties.Setter>() {
+            @Override
+            public void configure(HystrixCommandProperties.Setter setter) {
+                // this minimum timeout allows the retry strategy to fully execute before the
+                // hystrix command times out. The extra second is for the last request
+                long minTimeout = OpowerClient.this.retryStrategy.getMaxCumulativeInterval()
+                                  + TimeUnit.SECONDS.toMillis(1);
+                Integer currentSetting = setter.getExecutionIsolationThreadTimeoutInMilliseconds();
+                if (currentSetting == null || currentSetting < minTimeout) {
+                    setter.withExecutionIsolationThreadTimeoutInMilliseconds((int)minTimeout);
+                }
+            }
+        });
+    }
+
+    /**
      * Build the client proxy.
      *
      * @return the client proxy ready to use
@@ -425,13 +456,12 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     @Override
     public T build()  {
         setUpAuthorization();
+        hystrixCommandTimeout();
 
         super.executor(new ApacheHttpClient4Executor(prepareHttpClient(), this.clientRequestFilters))
              .clientErrorInterceptors(this.clientErrorInterceptors)
              .registerProviderInstance(this.jacksonJsonProvider);
-
         return configureMetrics(super.build());
-
     }
 
     /**
@@ -522,6 +552,5 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
                        String serviceName, String clientId) {
             super(resourceInterface, serviceDiscovery, serviceName, clientId);
         }
-
     }
 }

@@ -11,7 +11,7 @@ import org.apache.http.protocol.HttpContext;
  */
 public class ExponentialRetryStrategy implements ServiceUnavailableRetryStrategy {
 
-    public static final int DEFAULT_MAX_ATTEMPTS = 2;
+    public static final int DEFAULT_MAX_ATTEMPTS = 3;
     public static final long DEFAULT_RETRY_INTERVAL_IN_MS = 1000;
     private static final long MAX_INTERVAL_IN_MS = 10000;
     
@@ -52,5 +52,17 @@ public class ExponentialRetryStrategy implements ServiceUnavailableRetryStrategy
 
     private long calculateRetryInterval(int executionCount) {
         return Math.round(Math.min(MAX_INTERVAL_IN_MS, Math.pow(2, executionCount) * this.retryInterval));
+    }
+
+    /**
+     * Calculates the total amount of wait time between requests.
+     * @return the amount of cumulative wait time
+     */
+    public long getMaxCumulativeInterval() {
+        long sum = 0;
+        for (int i = 1; i < this.maxAttempts; i++) {
+            sum += calculateRetryInterval(i);
+        }
+        return sum;
     }
 }
