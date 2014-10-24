@@ -14,6 +14,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.opower</groupId>
+            <artifactId>rest-params</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>14.0.1</version>
