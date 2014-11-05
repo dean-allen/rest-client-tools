@@ -42,7 +42,7 @@
         <dependency>
             <groupId>com.opower</groupId>
             <artifactId>rest-client-hystrix</artifactId>
-            <version>${project.version}</version>
+            <version>${rest.client.open.source.version}</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
@@ -78,7 +78,7 @@
         <dependency>
             <groupId>com.opower</groupId>
             <artifactId>rest-client-test</artifactId>
-            <version>${project.version}</version>
+            <version>${rest.client.open.source.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
