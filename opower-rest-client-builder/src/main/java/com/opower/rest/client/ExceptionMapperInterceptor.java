@@ -45,7 +45,7 @@ public class ExceptionMapperInterceptor implements ClientErrorInterceptor {
      * @param response the ClientResponse object to be handled.
      * @throws ErrorResponseException for the given response's status code.
      */
-    public void handle(ClientResponse<?> response) {
+    public void handle(ClientResponse response) {
         ErrorResponse.ErrorDetails errorDetails = getErrorDetails(response);
 
         int status = response.getStatus();
@@ -70,7 +70,7 @@ public class ExceptionMapperInterceptor implements ClientErrorInterceptor {
         }
     }
 
-    private static ErrorResponse.ErrorDetails getErrorDetails(ClientResponse<?> response) {
+    private static ErrorResponse.ErrorDetails getErrorDetails(ClientResponse response) {
         ErrorResponse errorResponse;
         try {
             errorResponse = response.getEntity(ErrorResponse.class);
@@ -98,7 +98,7 @@ public class ExceptionMapperInterceptor implements ClientErrorInterceptor {
      * @param response the response to read
      * @return the response body as a String
      */
-    public static String fetchResponseBody(ClientResponse<?> response) {
+    public static String fetchResponseBody(ClientResponse response) {
         try {
             if (!response.resetStream()) {
                 return null;
@@ -106,7 +106,7 @@ public class ExceptionMapperInterceptor implements ClientErrorInterceptor {
 
             InputStream stream;
             if (response instanceof BaseClientResponse) {
-                BaseClientResponse<?> baseResponse = (BaseClientResponse<?>) response;
+                BaseClientResponse baseResponse = (BaseClientResponse) response;
                 BaseClientResponse.BaseClientResponseStreamFactory streamFactory = baseResponse.getStreamFactory();
                 stream = streamFactory.getInputStream();
             } else {
@@ -123,7 +123,7 @@ public class ExceptionMapperInterceptor implements ClientErrorInterceptor {
         }
     }
     
-    private static ErrorResponse.ErrorDetails errorWithResponseBody(ClientResponse<?> response) {
+    private static ErrorResponse.ErrorDetails errorWithResponseBody(ClientResponse response) {
         String body = fetchResponseBody(response);
         if (body != null) {
             return new ErrorResponse(response.getStatus(), null, body).getError();

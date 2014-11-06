@@ -36,6 +36,7 @@
 
     <properties>
         <com.netflix.hystrix.version>1.3.13</com.netflix.hystrix.version>
+        <rest.client.open.source.version>1.1.1</rest.client.open.source.version>
     </properties>
 
     <build>
@@ -1002,12 +1003,9 @@
     </profiles>
 
     <modules>
-        <module>rest-client-generator</module>
         <module>opower-rest-client-builder</module>
         <module>opower-rest-client-builder-test</module>
-        <module>rest-client-hystrix</module>
         <module>rest-interface-base</module>
-        <module>rest-client-test</module>
         <module>rest-params</module>
     </modules>
 
