@@ -5,9 +5,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <artifactId>rest-client-tools</artifactId>
+        <artifactId>opower-rest-client-tools</artifactId>
         <groupId>com.opower</groupId>
         <version>1.0.9-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>rest-interface-base</artifactId>
     <packaging>pom</packaging>
@@ -16,7 +17,7 @@
         <dependency>
             <groupId>com.opower</groupId>
             <artifactId>rest-params</artifactId>
-            <version>${project.version}</version>
+            <version>1.0.9-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>

@@ -11,7 +11,7 @@
     </parent>
 
     <groupId>com.opower</groupId>
-    <artifactId>rest-client-tools</artifactId>
+    <artifactId>opower-rest-client-tools</artifactId>
     <version>1.0.9-SNAPSHOT</version>
     <packaging>pom</packaging>
 
@@ -36,7 +36,7 @@
 
     <properties>
         <com.netflix.hystrix.version>1.3.13</com.netflix.hystrix.version>
-        <rest.client.open.source.version>1.1.1</rest.client.open.source.version>
+        <rest.client.tools.version>1.1.1</rest.client.tools.version>
     </properties>
 
     <build>
