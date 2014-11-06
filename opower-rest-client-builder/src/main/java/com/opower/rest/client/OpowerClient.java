@@ -80,7 +80,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     private ExponentialRetryStrategy retryStrategy = new ExponentialRetryStrategy();
     private int tokenTtlRefresh = DEFAULT_TOKEN_TTL_REFRESH;
     private Optional<ServiceDiscovery<Void>> serviceDiscovery = Optional.absent();
-    private Optional<BasicAuthCredentials> authorizationCredentials = Optional.absent();
+    private Optional<String> clientSecret = Optional.absent();
     private Optional<UriProvider> authUriProvider = Optional.absent();
     private Optional<ConfigurationCallback<HttpParams>> httpClientParams = Optional.absent();
     private Optional<MetricsProvider> metricsProvider = Optional.absent();
@@ -177,8 +177,8 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
      */
     @SuppressWarnings("unchecked")
     public B clientSecret(String clientSecret) {
-        checkArgument(clientSecret != null && clientSecret.trim().length() > 0, "You must provide a non-blank clientSecret");
-        this.authorizationCredentials = Optional.of(new BasicAuthCredentials(this.clientId, clientSecret));
+        checkArgument(clientSecret == null || clientSecret.trim().length() > 0, "You must provide a non-blank clientSecret");
+        this.clientSecret = Optional.fromNullable(clientSecret);
         return (B) this;
     }
 
@@ -369,7 +369,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     }
 
     private void setUpAuthorization() {
-        if (this.authorizationCredentials.isPresent()) {
+        if (this.clientSecret.isPresent()) {
 
             UriProvider uriProviderToUse = null;
 
@@ -382,6 +382,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
                 }
                 uriProviderToUse = this.authUriProvider.get();
             }
+            BasicAuthCredentials credentials = new BasicAuthCredentials(this.clientId, this.clientSecret.get());
             AccessTokenResource accessTokenResource = new Client.Builder<>(new OpowerResourceInterface<>(AccessTokenResource.class),
                               uriProviderToUse)
                     .clientErrorInterceptors(this.clientErrorInterceptors)
@@ -389,8 +390,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
                                                             ImmutableList.of(new RequestIdFilter(),
                                                                              new ServiceNameClientRequestFilter(
                                                                                      AUTH_SERVICE_NAME),
-                                                                             new AuthorizationClientRequestFilter(
-                                                                                     this.authorizationCredentials.get()))))
+                                                                             new AuthorizationClientRequestFilter(credentials))))
                     .registerProviderInstance(this.jacksonJsonProvider)
                     .build();
 
