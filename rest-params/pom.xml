@@ -3,14 +3,14 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>rest-client-tools</artifactId>
+        <artifactId>opower-rest-client-tools</artifactId>
         <groupId>com.opower</groupId>
         <version>1.0.9-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>rest-params</artifactId>
-
+    <description>Extensions to rest-client-tools that are specific to Opower.</description>
     <dependencies>
         <dependency>
             <groupId>javax.ws.rs</groupId>
