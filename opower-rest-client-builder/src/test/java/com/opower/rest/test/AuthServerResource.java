@@ -3,10 +3,13 @@ package com.opower.rest.test;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableSet;
 import com.opower.auth.model.oauth2.GrantType;
+import com.opower.auth.oauth2.Scope;
 import com.opower.auth.oauth2.TokenType;
 import com.opower.auth.resources.oauth2.AccessTokenResource;
 import com.opower.auth.resources.oauth2.AccessTokenResponse;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +29,7 @@ import org.joda.time.Instant;
 public class AuthServerResource implements AccessTokenResource {
     static final String VALIDATED_TOKEN = "urn:opower.com:oauth2:validated_token";
 
+    private static final Set<Scope> SCOPES = ImmutableSet.of();
     private static final Cache<String, AccessTokenResponse> TOKENS = CacheBuilder.newBuilder().build();
 
     @Context
@@ -44,7 +48,7 @@ public class AuthServerResource implements AccessTokenResource {
                     @Override
                     public AccessTokenResponse call() throws Exception {
                         Instant expiresAt = Instant.now().plus(TimeUnit.DAYS.toMillis(1));
-                        return new AccessTokenResponse(creds[0], newToken, TokenType.BEARER.name(), computeExpiresInSeconds(
+                        return new AccessTokenResponse(creds[0], newToken, TokenType.BEARER.name(), SCOPES,computeExpiresInSeconds(
                                 expiresAt));
                     }
                 });
@@ -60,6 +64,7 @@ public class AuthServerResource implements AccessTokenResource {
                     response = new AccessTokenResponse(response.getClientId(),
                                                        response.getAccessToken(),
                                                        VALIDATED_TOKEN,
+                                                       SCOPES,
                                                        response.getExpiresIn());
                     TOKENS.put(accessToken, response);
                 }

@@ -1,6 +1,8 @@
 package com.opower.rest.client.filters.auth;
 
+import com.google.common.collect.ImmutableSet;
 import com.opower.auth.model.oauth2.GrantType;
+import com.opower.auth.oauth2.Scope;
 import com.opower.auth.resources.oauth2.AccessTokenResource;
 import com.opower.auth.resources.oauth2.AccessTokenResponse;
 import com.opower.rest.client.AuthorizationCredentials;
@@ -116,6 +118,6 @@ public class TestOauth2AccessTokenRequester {
     }
 
     private static AccessTokenResponse createAccessTokenResponse(Long expiresIn) {
-        return new AccessTokenResponse("client_id", "access_token", "token_type", expiresIn);
+        return new AccessTokenResponse("client_id", "access_token", "token_type", ImmutableSet.<Scope>of(), expiresIn);
     }
 }
