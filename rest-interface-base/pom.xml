@@ -7,7 +7,7 @@
     <parent>
         <artifactId>opower-rest-client-tools</artifactId>
         <groupId>com.opower</groupId>
-        <version>1.0.10-SNAPSHOT</version>
+        <version>1.0.10</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>rest-interface-base</artifactId>
@@ -17,7 +17,7 @@
         <dependency>
             <groupId>com.opower</groupId>
             <artifactId>rest-params</artifactId>
-            <version>1.0.10-SNAPSHOT</version>
+            <version>1.0.10</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
