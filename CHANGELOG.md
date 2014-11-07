@@ -1,3 +1,7 @@
+1.0.10
+------
+- upgraded to auth-common 1.0.1
+
 1.0.9
 -----
 - open sourced rest-client-generator, rest-client-test, rest-client-hystrix.
