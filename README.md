@@ -3,7 +3,7 @@ rest-client-tools
 
 [![Build Status](http://jenkins-dev.va.opower.it/job/rest-client-tools/badge/icon)](http://jenkins-dev.va.opower.it/job/rest-client-tools/)
 
-Portions of rest-client-tools have been open sourced -- checkout the README [here][https://github.com/opower/rest-client-tools]
+Portions of rest-client-tools have been open sourced -- checkout the README [here](https://github.com/opower/rest-client-tools)
 
 This repository contains only the Opower specific extensions to rest-client-tools. 
 
@@ -13,7 +13,8 @@ This repository contains only the Opower specific extensions to rest-client-tool
 - JSON serialization pre configured with sane defaults
 - Default exception handling preconfigured
 
-More information can be found [here][https://wiki.opower.com/display/PD/Archmage+Client+Migration+Guide]
+More information can be found [here](https://wiki.opower.com/display/PD/Archmage+Client+Migration+Guide)
+
 
 Quick Start
 ===========
@@ -23,7 +24,7 @@ First add the dependency to your pom:
     <dependency>
         <groupId>com.opower</groupId>
         <artifactId>opower-rest-client-builder</artifactId>
-        <version>1.0.8</version>
+        <version>1.0.9</version>
     </dependency>
     
 
@@ -37,7 +38,7 @@ zookeeper cluster.
 The first step when building your client is to create a ServiceDiscovery instance. As of archmage 0.4.0, if the client of your service is itself another Archmage service, the Curator ServiceDiscovery instance will be available to you from the BasicService class:
 
     ServiceDiscovery serviceDiscovery = basicService.getServiceDiscovery(); // the curator service discovery instance will be available
-                                                                        // to you from in BasicService class in archmage services
+                                                                            // to you from in BasicService class in archmage services
 
 If the client of your service is NOT another Archmage service, you will need to build your own Curator ServiceDiscovery instance:
 
@@ -49,10 +50,10 @@ If the client of your service is NOT another Archmage service, you will need to 
  
     ServiceDiscovery<Void> serviceDiscovery = ServiceDiscoveryBuilder.builder(Void.class)
                 .client(checkNotNull(curatorFramework))
-                .basePath(BASE_PATH + pathTier)                         // This needs to be /services/[tier]
-                .build(); 
- 
-    // "[tier]" is one of the Strings in com.opower.archmage.Tier : {development, implementation, local, production, scale, stage}
+                .basePath(BASE_PATH + pathTier)             // This needs to be /services/[tier]
+                .build();                                   // "[tier]" is one of the Strings in
+                                                            // com.opower.archmage.Tier :
+                                                            // {development, implementation, local, production, scale, stage}
     
 Once you have a serviceDiscovery instance, you can build your very own OpowerClient.
 
