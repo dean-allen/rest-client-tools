@@ -1,4 +1,4 @@
-rest-client-tools
+opower-rest-client-tools
 =================
 
 [![Build Status](http://jenkins-dev.va.opower.it/job/rest-client-tools/badge/icon)](http://jenkins-dev.va.opower.it/job/rest-client-tools/)
@@ -15,18 +15,6 @@ This repository contains only the Opower specific extensions to rest-client-tool
 
 More information can be found [here](https://wiki.opower.com/display/PD/Archmage+Client+Migration+Guide)
 
-
-Quick Start
-===========
-
-First add the dependency to your pom:
-
-    <dependency>
-        <groupId>com.opower</groupId>
-        <artifactId>opower-rest-client-builder</artifactId>
-        <version>1.0.9</version>
-    </dependency>
-    
 
 Service Discovery - deprecated 
 -----------------
