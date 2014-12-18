@@ -1,10 +1,12 @@
 package com.opower.rest.client;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.opower.rest.ResourceMetadata;
 import com.opower.rest.client.generator.core.ResourceInterface;
 
 import java.lang.annotation.Annotation;
@@ -20,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Attempts to make sure that the interface used for clients only use a certain well defined set of packages.
@@ -54,6 +57,7 @@ public final class OpowerResourceInterface<T> extends ResourceInterface<T> {
     private static final Logger LOG = LoggerFactory.getLogger(OpowerResourceInterface.class);
 
     private final Set<String> supportedPackages;
+    private final Class<T> resourceClass;
 
     /**
      * Creates an OpowerResourceInterface instance based on the supplied resource interface class.
@@ -61,18 +65,21 @@ public final class OpowerResourceInterface<T> extends ResourceInterface<T> {
      * @param resourceClass the resource interface
      */
     public OpowerResourceInterface(Class<T> resourceClass) {
-        this(resourceClass, ImmutableSet.<String>of());
+        this(resourceClass, resolveModelPackages(resourceClass));
     }
 
     /**
      * This constructor allows other supporting packages to be accepted when validating the resource. This is useful if
      * you have put dependent classes for your resource interface in different packages. You will receive a stern warning for
      * any classes that you use on your resource interface that are not included in the artifacts listed in rest-interface-base.
-     * 
+     *
      * @param resourceClass      the resource interface
      * @param modelPackages Set of package names starting with opower or com.opower that contain custom classes referenced
      *                           by the resource class outside of the resource class' package.
+     * @deprecated Service writers should be specifying the modelPackages on their resource interfaces using
+     *             the ResourceMetadata annotation.
      */
+    @Deprecated
     public OpowerResourceInterface(Class<T> resourceClass, String... modelPackages) {
         this(resourceClass, ImmutableSet.copyOf(modelPackages));
     }
@@ -104,10 +111,12 @@ public final class OpowerResourceInterface<T> extends ResourceInterface<T> {
         builder.add("org.hibernate.validator.constraints");
         builder.add("org.slf4j");
         builder.add("com.opower.rest.params");
+        builder.add("com.opower.rest");
         builder.add(resourceClass.getPackage().getName());
         builder.addAll(packageSet);
 
         this.supportedPackages = builder.build();
+        this.resourceClass = resourceClass;
 
         checkForSupportedTypes(resourceClass);
     }
@@ -226,4 +235,28 @@ public final class OpowerResourceInterface<T> extends ResourceInterface<T> {
         addWork(m.getReturnType(), validationWork);
     }
 
+    private Optional<String> serviceNameFromMetadata(ResourceMetadata resourceMetadata) {
+        checkState(resourceMetadata.serviceName().trim().length() > 0, "serviceName is required on the ResourceMetadata");
+        checkState(resourceMetadata.serviceVersion() > 0, "serviceVersion must be greater than 0");
+        return Optional.of(String.format("%s-v%d", resourceMetadata.serviceName(), resourceMetadata.serviceVersion()));
+    }
+
+    /**
+     * Get the serviceName string as it's registered in zookeeper.
+     * @return an Optional<String> this is only optional now while we transition old services from the
+     *         deprecated old style of resource interface.
+     */
+    public Optional<String> getServiceName() {
+        ResourceMetadata resourceMetadata = this.resourceClass.getAnnotation(ResourceMetadata.class);
+        return resourceMetadata == null ? Optional.<String>absent() : serviceNameFromMetadata(resourceMetadata);
+    }
+
+    private static Set<String> resolveModelPackages(Class<?> resourceClass) {
+        checkNotNull(resourceClass);
+        ResourceMetadata resourceMetadata = resourceClass.getAnnotation(ResourceMetadata.class);
+        if (resourceMetadata != null && resourceMetadata.modelPackages() != null) {
+            return ImmutableSet.copyOf(resourceMetadata.modelPackages());
+        }
+        return ImmutableSet.of();
+    }
 }

@@ -16,48 +16,24 @@ This repository contains only the Opower specific extensions to rest-client-tool
 More information can be found [here](https://wiki.opower.com/display/PD/Archmage+Client+Migration+Guide)
 
 
-Service Discovery - deprecated 
+@ResourceMetadata
 -----------------
+As of 1.1.0 all resource interfaces should be annotated with @ResourceMetadata. In archmage services, this is the interface in
+your <service>-interface project. This is an important change that makes consuming services even easier as now clients won't
+have to figure out which serviceName to use and won't have to worry about squelching warnings from resource interface validation.
+We have deprecated all the old constructors in OpowerClient.Builder that required you to pass in a serviceName. Now service writers
+should provide the serviceName via the @ResourceMetadata annotation on their resource interface. Here is an example:
 
-The UriProvider described here is deprecated and will soon be replaced with SimpleUriProvider in conjunction with synapse-lite. 
-This will make the client code a lot simpler and much less error prone in many cases. This will also take a bunch of load off our
-zookeeper cluster.
 
-The first step when building your client is to create a ServiceDiscovery instance. As of archmage 0.4.0, if the client of your service is itself another Archmage service, the Curator ServiceDiscovery instance will be available to you from the BasicService class:
+    @ResourceMetadata(serviceName = "example", serviceVersion = 1, modelPackages = { "com.opower.example.model" })
+    @Path("/foo")
+    @Produces(MediaType.APPLICATION_JSON)
+    public interface FooResource {
+        @GET
+        String getFoo();
+    }
 
-    ServiceDiscovery serviceDiscovery = basicService.getServiceDiscovery(); // the curator service discovery instance will be available
-                                                                            // to you from in BasicService class in archmage services
-
-If the client of your service is NOT another Archmage service, you will need to build your own Curator ServiceDiscovery instance:
-
-    String connectString = "dev-zookeeper-1001.va.opower.it,dev-zookeeper-1002.va.opower.it" // string of the format (IP:Port,IP:Port,IP:Port) used connect to our ZooKeeper servers.
-    RetryPolicy retryPolicy = new RetryOneTime(1000) // See http://curator.apache.org/apidocs/org/apache/curator/RetryPolicy.html
- 
-    CuratorFramework curatorFramework = CuratorFrameworkFactory.newClient(connectString, retryPolicy); // start by getting a CuratorFramework instance. 
-    curatorFramework.start();
- 
-    ServiceDiscovery<Void> serviceDiscovery = ServiceDiscoveryBuilder.builder(Void.class)
-                .client(checkNotNull(curatorFramework))
-                .basePath(BASE_PATH + pathTier)             // This needs to be /services/[tier]
-                .build();                                   // "[tier]" is one of the Strings in
-                                                            // com.opower.archmage.Tier :
-                                                            // {development, implementation, local, production, scale, stage}
-    
-Once you have a serviceDiscovery instance, you can build your very own OpowerClient.
-
-    String serviceName = "example-v1"; // this String must match the string that the archmage service used to register itself in zookeeper.
-                                       // In archmage you can obtain this by calling serviceName.getServiceName()
- 
-    String clientId = OAUTH_CLIENT_ID // if not using auth, make sure to specify a unique static clientID that you can look for in opentsdb to find
-                                      // stats for your client. This should not be generated uniquely at runtime.
- 
-    OpowerClient.Builder<FrobResource> clientBuilder = new OpowerClient.Builder<>(FrobResource.class, serviceDiscovery, serviceName, OAUTH_CLIENT_ID)
-                            .clientSecret(OAUTH_CLIENT_SECRET); // by specifying the oauth2 client secret, 
-                                                               // you enable the auth-service integration
-    FrobResource client = clientBuilder.build();
- 
-    // now I can access the service with the client
-    Frob f = client.findFrob("frobId);
+Note the modelPackages field is optional.
 
 Configuration Overview
 ======================

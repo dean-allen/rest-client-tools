@@ -1,3 +1,7 @@
+1.1.0
+-----
+- added @ResourceMetadata annotation to make service writers instead of service consumers responsible for specifying serviceName and modelPackages
+
 1.0.10
 ------
 - upgraded to auth-common 1.0.1

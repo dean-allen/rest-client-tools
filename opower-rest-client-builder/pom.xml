@@ -16,6 +16,11 @@
     <dependencies>
         <dependency>
             <groupId>com.opower</groupId>
+            <artifactId>rest-interface-common</artifactId>
+            <version>1.0.11-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.opower</groupId>
             <artifactId>sensual-net</artifactId>
             <version>1.4</version>
         </dependency>
