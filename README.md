@@ -35,6 +35,23 @@ should provide the serviceName via the @ResourceMetadata annotation on their res
 
 Note the modelPackages field is optional.
 
+UriProvider
+-----------
+To construct a client proxy you must provide a UriProvider. The UriProvider is responsible for providing the base url for each
+client request. In most cases using the SimpleUriProvider will be sufficient. In the case of archmage services, the SimpleUriProvider
+in conjunction with synapse-lite is the official way to configure your clients. Here is an example of how this is done:
+
+    // this is prod, we also have dev and stage synapse environments
+    UriProvider uriProvider = new SimpleUriProvider("http://prod-synapse.va.opower.it:8999");
+
+    OpowerClient.Builder<FrobResource> clientBuilder = new OpowerClient.Builder<>(FrobResource.class, uriProvider, "clientId");
+
+There are 3 synapse-lite environments. Use these urls in the constructor of SimpleUriProvider as shown above:
+
+ * http://dev-synapse.va.opower.it:8999
+ * http://stage-synapse.va.opower.it:8999
+ * http://prod-synapse.va.opower.it:8999
+
 Configuration Overview
 ======================
 
