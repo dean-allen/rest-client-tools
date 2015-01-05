@@ -127,4 +127,5 @@ public class TestOpowerClient {
         HystrixCommandProperties.Setter setter = Iterables.getFirst(setters, null);
         assertThat(setter.getExecutionIsolationThreadTimeoutInMilliseconds(), is(TWENTY_SECONDS));
     }
+
 }

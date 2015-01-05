@@ -97,14 +97,21 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
      * @param clientId          the oauth2 clientId. If you are not authorizing these service calls for some reason you must
      *                          still provide a clientId that can be used to identify the traffic this client will generate in
      *                          metrics and alerts.
+     * @deprecated serviceName is no longer required if the ResourceInterface you want to use has been annotated
+     *             with @ResourceMetadata. Encourage the service writer to update to the latest version of
+     *             rest-client tools!
      */
+    @Deprecated
     protected OpowerClient(Class<T> resourceInterface, UriProvider uriProvider, String serviceName, String clientId) {
         this(new OpowerResourceInterface<>(resourceInterface), uriProvider, serviceName, clientId);
     }
 
     /**
-     * Creates an OpowerClient instance that will use Zookeeper to look up server urls. This is
-     * the preferred method of creating client instances.
+     * Creates an OpowerClient instance that will use Zookeeper to look up server urls. This is now deprecated. We have
+     * released synapse-lite and you should instead use the other non deprecated constructor with a SimpleUriProvider
+     * pointed at synapse-lite instead. For example:
+     *
+     *      new OpowerClient.Builder(someClass, new SimpleUriProvider("http://dev-synapse.va.opower.it"), "clientId);
      *
      * @param resourceInterface the resource interface
      * @param serviceDiscovery  The curator ServiceDiscovery instance that will be used to look up server urls
@@ -112,7 +119,11 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
      * @param clientId          the oauth2 clientId. If you are not authorizing these service calls for some reason you must
      *                          still provide a clientId that can be used to identify the traffic this client will generate in
      *                          metrics and alerts.
+     * @deprecated serviceName is no longer required if the ResourceInterface you want to use has been annotated
+     *             with @ResourceMetadata. Encourage the service writer to update to the latest version of
+     *             rest-client tools!
      */
+    @Deprecated
     protected OpowerClient(Class<T> resourceInterface, ServiceDiscovery<Void> serviceDiscovery,
                            String serviceName, String clientId) {
         this(new OpowerResourceInterface<>(resourceInterface), serviceDiscovery, serviceName, clientId);
@@ -128,7 +139,11 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
      * @param clientId          the oauth2 clientId. If you are not authorizing these service calls for some reason you must
      *                          still provide a clientId that can be used to identify the traffic this client will generate in
      *                          metrics and alerts.
+     * @deprecated serviceName is no longer required if the ResourceInterface you want to use has been annotated
+     *             with @ResourceMetadata. Encourage the service writer to update to the latest version of
+     *             rest-client tools!
      */
+    @Deprecated
     protected OpowerClient(OpowerResourceInterface<T> resourceInterface, ServiceDiscovery<Void> serviceDiscovery,
                            String serviceName, String clientId) {
         this(resourceInterface, new CuratorUriProvider(checkNotNull(serviceDiscovery), checkNotNull(serviceName)),
@@ -150,7 +165,8 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     protected OpowerClient(OpowerResourceInterface<T> resourceInterface, UriProvider uriProvider,
                            String serviceName, String clientId) {
         super(resourceInterface, uriProvider, groupKey(clientId));
-        this.serviceName = checkNotNull(serviceName);
+        this.serviceName = checkNotNull(serviceName, "The ResourceInterface must be annotated with @ResourceMetadata or you must" +
+                                                     " use another constructor to supply the serviceName");
         this.metricsProvider = Optional.of(METRICS_PROVIDER_FACTORY.getInstance(String.format("%s.client", this.serviceName)));
         this.sensuConfiguration = Optional.of(new SensuConfiguration.Setter());
         this.clientRequestFilters = ImmutableList.of(
@@ -499,7 +515,11 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
          * @param clientId          The oauth2 clientId. If you are not authorizing these service calls for some reason you must
          *                          still provide a clientId that can be used to identify the traffic this client will generate in
          *                          metrics and alerts.
+         * @deprecated serviceName is no longer required if the ResourceInterface you want to use has been annotated
+         *             with @ResourceMetadata. Encourage the service writer to update to the latest version of
+         *             rest-client tools!
          */
+        @Deprecated
         public Builder(Class<T> resourceInterface, UriProvider uriProvider, String serviceName, String clientId) {
             super(resourceInterface, uriProvider, serviceName, clientId);
         }
@@ -515,14 +535,20 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
          * @param clientId          The oauth2 clientId. If you are not authorizing these service calls for some reason you must
          *                          still provide a clientId that can be used to identify the traffic this client will generate in
          *                          metrics and alerts.
+         * @deprecated serviceName is no longer required if the ResourceInterface you want to use has been annotated
+         *             with @ResourceMetadata. Encourage the service writer to update to the latest version of
+         *             rest-client tools!
          */
+        @Deprecated
         public Builder(OpowerResourceInterface<T> resourceInterface, UriProvider uriProvider, String serviceName, String clientId) {
             super(resourceInterface, uriProvider, serviceName, clientId);
         }
 
         /**
-         * Creates an OpowerClient.Builder instance that will use Zookeeper to look up server urls. This is
-         * the preferred method of creating client instances.
+         * This is now deprecated since we have released synapse-lite. You should instead use the other non deprecated
+         * constructor with a SimpleUriProvider pointed at synapse-lite. For example:
+         *
+         *      new OpowerClient.Builder(someClass, new SimpleUriProvider("http://dev-synapse.va.opower.it"), "clientId);
          *
          * @param resourceInterface the resource interface
          * @param serviceDiscovery  The curator ServiceDiscovery instance that will be used to look up server urls
@@ -530,7 +556,12 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
          * @param clientId          the oauth2 clientId. If you are not authorizing these service calls for some reason you must
          *                          still provide a clientId that can be used to identify the traffic this client will generate in
          *                          metrics and alerts.
+         *
+         * @deprecated serviceName is no longer required if the ResourceInterface you want to use has been annotated
+         *             with @ResourceMetadata. Encourage the service writer to update to the latest version of
+         *             rest-client tools!
          */
+        @Deprecated
         public Builder(Class<T> resourceInterface,
                        ServiceDiscovery<Void> serviceDiscovery, String serviceName, String clientId) {
             super(resourceInterface, serviceDiscovery, serviceName, clientId);
@@ -547,10 +578,41 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
          * @param clientId          the oauth2 clientId. If you are not authorizing these service calls for some reason you must
          *                          still provide a clientId that can be used to identify the traffic this client will generate in
          *                          metrics and alerts.
+         *
+         * @deprecated serviceName is no longer required if the ResourceInterface you want to use has been annotated
+         *             with @ResourceMetadata. Encourage the service writer to update to the latest version of
+         *             rest-client tools!
          */
+        @Deprecated
         public Builder(OpowerResourceInterface<T> resourceInterface, ServiceDiscovery<Void> serviceDiscovery,
                        String serviceName, String clientId) {
             super(resourceInterface, serviceDiscovery, serviceName, clientId);
         }
+
+        /**
+         * Create a client proxy Builder. The supplied class must be annotated with the @ResourceMetadata annotation.
+         * @param resourceInterface the OpowerResourceInterface to use.
+         * @param uriProvider       The UriProvider to use
+         * @param clientId          the oauth2 clientId. If you are not authorizing these service calls for some reason you must
+         *                          still provide a clientId that can be used to identify the traffic this client will generate in
+         *                          metrics and alerts.
+         */
+        public Builder(Class<T> resourceInterface, UriProvider uriProvider, String clientId) {
+            this(new OpowerResourceInterface<T>(resourceInterface), uriProvider, clientId);
+        }
+
+        /**
+         * Create a client proxy Builder. The supplied class must be annotated with the @ResourceMetadata annotation.
+         * @param resourceInterface the OpowerResourceInterface to use.
+         * @param uriProvider       The UriProvider to use
+         * @param clientId          the oauth2 clientId. If you are not authorizing these service calls for some reason you must
+         *                          still provide a clientId that can be used to identify the traffic this client will generate in
+         *                          metrics and alerts.
+         */
+        public Builder(OpowerResourceInterface<T> resourceInterface, UriProvider uriProvider, String clientId) {
+            super(resourceInterface, uriProvider, resourceInterface.getServiceName().orNull(), clientId);
+        }
+
+
     }
 }

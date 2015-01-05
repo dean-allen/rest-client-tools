@@ -1007,6 +1007,7 @@
         <module>opower-rest-client-builder-test</module>
         <module>rest-interface-base</module>
         <module>rest-params</module>
+        <module>rest-interface-common</module>
     </modules>
 
 </project>
