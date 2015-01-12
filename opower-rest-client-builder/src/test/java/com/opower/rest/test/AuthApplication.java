@@ -7,6 +7,7 @@ import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.common.collect.ImmutableSet;
+import com.opower.rest.test.resource.FrobServerResource;
 import java.util.Set;
 import javax.ws.rs.core.Application;
 
@@ -25,7 +26,7 @@ public class AuthApplication extends Application {
 
     @Override
     public Set<Class<?>> getClasses() {
-        return ImmutableSet.<Class<?>>of(AuthServerResource.class);
+        return ImmutableSet.<Class<?>>of(AuthServerResource.class, FrobServerResource.class);
     }
 
     @Override
