@@ -387,17 +387,14 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     private void setUpAuthorization() {
         if (this.clientSecret.isPresent()) {
 
-            UriProvider uriProviderToUse = null;
+            UriProvider uriProviderToUse = this.uriProvider;
 
             if (this.serviceDiscovery.isPresent()) {
                 uriProviderToUse = new CuratorUriProvider(this.serviceDiscovery.get(), AUTH_SERVICE_NAME);
-            } else {
-                if (!this.authUriProvider.isPresent()) {
-                    throw new IllegalStateException(
-                            "You must specify an authUriProvider instance since you're not using curator");
-                }
+            } else if (this.authUriProvider.isPresent()) {
                 uriProviderToUse = this.authUriProvider.get();
             }
+
             BasicAuthCredentials credentials = new BasicAuthCredentials(this.clientId, this.clientSecret.get());
             AccessTokenResource accessTokenResource = new Client.Builder<>(new OpowerResourceInterface<>(AccessTokenResource.class),
                               uriProviderToUse)

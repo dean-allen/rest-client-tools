@@ -6,6 +6,7 @@ import com.netflix.hystrix.HystrixCommandProperties;
 import com.opower.rest.client.ConfigurationCallback;
 import com.opower.rest.client.OpowerClient;
 import com.opower.rest.client.generator.core.SimpleUriProvider;
+import com.opower.rest.client.generator.core.UriProvider;
 import com.opower.rest.test.jetty.JettyServerBuilder;
 import com.opower.rest.test.resource.FrobClientLoader;
 import com.opower.rest.test.resource.FrobResource;
@@ -42,7 +43,8 @@ public class OpowerFrobClientLoader implements FrobClientLoader {
     private static final String SERVICE_NAME = "frob-v1";
     private static final String CLIENT_ID = "testClientId";
     private static final String CLIENT_SECRET = "testClientSecret";
-   
+    private static final UriProvider FROB_URI_PROVIDER = new SimpleUriProvider("http://localhost:7000/");
+    private static final UriProvider AUTH_URI_PROVIDER = new SimpleUriProvider("http://localhost:7071/");
     private CuratorFramework curatorClient;
     private ServiceDiscovery serviceDiscovery;
     private Server authServer;
@@ -74,10 +76,15 @@ public class OpowerFrobClientLoader implements FrobClientLoader {
             Throwables.propagate(e);
         }
         try {
-            return ImmutableMap.of("withZK", defaultClient(),
-                                   "withZKAndAuth", defaultWithAuth(),
-                                   "noZKNoAuth", noZKNoAuth(),
-                                   "noZKWithAuth", noZKWithAuth());
+            return new ImmutableMap.Builder<String, FrobResource>()
+                               .put("noAuth", noAuth())
+                               .put("withAuthSeparateUriProviders", withAuthSeparateUriProviders())
+                               .put("withAuthSameUriProviders", withAuthSameUriProvider())
+                               .put("deprecatedwithZK", deprecatedDefaultClient())
+                               .put("deprecatedwithZKAndAuth", deprecatedDefaultWithAuth())
+                               .put("deprecatedNoZKNoAuth", deprecatedNoZKNoAuth())
+                               .put("deprecatedNoZKWithAuth", deprecatednoZKWithAuth())
+                               .build();
         } catch (Exception e) {
             throw Throwables.propagate(e);
         }
@@ -91,32 +98,52 @@ public class OpowerFrobClientLoader implements FrobClientLoader {
         this.serviceDiscovery.registerService(instanceBuilder.build());
     }
 
-    private FrobResource noZKNoAuth() throws Exception {
-        return new OpowerClient.Builder<>(FrobResource.class,
-                new SimpleUriProvider("http://localhost:7000/"), SERVICE_NAME, CLIENT_ID)
+    private FrobResource noAuth() throws Exception {
+        return new OpowerClient.Builder<>(AnnotatedFrobResource.class,FROB_URI_PROVIDER, CLIENT_ID)
                 .commandProperties(TIMEOUT_CALLBACK)
                 .disableMetrics()
                 .build();
     }
 
-    private FrobResource noZKWithAuth() throws Exception {
-        return new OpowerClient.Builder<>(FrobResource.class,
-                new SimpleUriProvider("http://localhost:7000"), SERVICE_NAME, CLIENT_ID)
+    private FrobResource withAuthSeparateUriProviders() throws Exception {
+        return new OpowerClient.Builder<>(AnnotatedFrobResource.class, FROB_URI_PROVIDER, CLIENT_ID)
                 .disableMetrics()
-                .clientSecret(CLIENT_SECRET,
-                              new SimpleUriProvider("http://localhost:7071"))
+                .clientSecret(CLIENT_SECRET, AUTH_URI_PROVIDER)
                 .commandProperties(TIMEOUT_CALLBACK)
                 .build();
     }
 
-    private FrobResource defaultClient() throws Exception {
+    private FrobResource withAuthSameUriProvider() throws Exception {
+        return new OpowerClient.Builder<>(AnnotatedFrobResource.class, AUTH_URI_PROVIDER, CLIENT_ID)
+                .disableMetrics()
+                .clientSecret(CLIENT_SECRET)
+                .commandProperties(TIMEOUT_CALLBACK)
+                .build();
+    }
+
+    private FrobResource deprecatedNoZKNoAuth() throws Exception {
+        return new OpowerClient.Builder<>(FrobResource.class, FROB_URI_PROVIDER, SERVICE_NAME, CLIENT_ID)
+                .commandProperties(TIMEOUT_CALLBACK)
+                .disableMetrics()
+                .build();
+    }
+
+    private FrobResource deprecatednoZKWithAuth() throws Exception {
+        return new OpowerClient.Builder<>(FrobResource.class, FROB_URI_PROVIDER, SERVICE_NAME, CLIENT_ID)
+                .disableMetrics()
+                .clientSecret(CLIENT_SECRET, AUTH_URI_PROVIDER)
+                .commandProperties(TIMEOUT_CALLBACK)
+                .build();
+    }
+
+    private FrobResource deprecatedDefaultClient() throws Exception {
         return new OpowerClient.Builder<>(FrobResource.class, this.serviceDiscovery, SERVICE_NAME, CLIENT_ID)
                 .commandProperties(TIMEOUT_CALLBACK)
                 .disableMetrics()
                 .build();
     }
 
-    private FrobResource defaultWithAuth() throws Exception {
+    private FrobResource deprecatedDefaultWithAuth() throws Exception {
         return new OpowerClient.Builder<>(FrobResource.class, this.serviceDiscovery, SERVICE_NAME, CLIENT_ID)
                 .commandProperties(TIMEOUT_CALLBACK)
                 .disableMetrics()

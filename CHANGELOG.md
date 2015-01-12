@@ -1,6 +1,7 @@
 1.1.0
 -----
 - added @ResourceMetadata annotation to make service writers instead of service consumers responsible for specifying serviceName and modelPackages
+- fixed bug that required specifying a separate UriProvider when using auth
 
 1.0.10
 ------
