@@ -2,6 +2,7 @@
 -----
 - added @ResourceMetadata annotation to make service writers instead of service consumers responsible for specifying serviceName and modelPackages
 - fixed bug that required specifying a separate UriProvider when using auth
+- upgraded to rest-client-tools 1.1.2 (The open source artifacts)
 
 1.0.10
 ------

@@ -5,6 +5,7 @@ import com.codahale.metrics.SharedMetricRegistries;
 import com.netflix.config.ConfigurationManager;
 import com.netflix.hystrix.HystrixCommandProperties;
 import com.netflix.hystrix.exception.HystrixRuntimeException;
+import com.opower.rest.ResourceMetadata;
 import com.opower.rest.client.ConfigurationCallback;
 import com.opower.rest.client.OpowerClient;
 import com.opower.rest.client.generator.core.SimpleUriProvider;
@@ -29,8 +30,9 @@ public class Codahale3MetricsIntegrationTesting {
     public static final int PORT = 7000;
     @ClassRule
     public static final JettyRule JETTY_RULE = new JettyRule(PORT, Frob.class.getResource("/jersey/1/web.xml").toString());
-    
-    private static final String SERVICE_NAME = "test";
+    private static final ResourceMetadata RESOURCE_METADATA = AnnotatedFrobResource.class.getAnnotation(ResourceMetadata.class);
+    private static final String SERVICE_NAME = String.format("%s-v%d",RESOURCE_METADATA.serviceName(),
+                                                             RESOURCE_METADATA.serviceVersion());
     private static final String CLIENT_ID = "client.id";
     private static final String FROB_ID = "frobId";
     private static final int FROB_METHOD_COUNT = FrobResource.class.getDeclaredMethods().length;
@@ -40,9 +42,9 @@ public class Codahale3MetricsIntegrationTesting {
      */
     @Test
     public void metricsAreRecorded() {
-        FrobResource client = new OpowerClient.Builder<>(FrobResource.class,
+        AnnotatedFrobResource client = new OpowerClient.Builder<>(AnnotatedFrobResource.class,
                                                         new SimpleUriProvider("http://localhost:7000/"), 
-                                                        SERVICE_NAME, CLIENT_ID)
+                                                        CLIENT_ID)
                 .disableSensuPublishing()
                 .commandProperties(new ConfigurationCallback<HystrixCommandProperties.Setter>() {
                     @Override
@@ -57,10 +59,21 @@ public class Codahale3MetricsIntegrationTesting {
         client.createFrob(new Frob(FROB_ID));
         client.frobString(FROB_ID);
 
+        try {
+            client.frobJsonError();
+        } catch (Exception ex) {
+            // ignore
+        }
+
+        try {
+            client.frobErrorResponse();
+        } catch (Exception e) {
+            // ignore
+        }
+
         MetricRegistry metricRegistry = SharedMetricRegistries.getOrCreate(String.format("%s.client",SERVICE_NAME));
         assertThat(metricRegistry.getTimers().size(), is(FROB_METHOD_COUNT));
-        // metrics are created lazily
-        assertThat(metricRegistry.getCounters().size(), is(0));
+        assertThat(metricRegistry.getCounters().size(), is(1));
 
 
         Properties props = new Properties();
@@ -72,7 +85,6 @@ public class Codahale3MetricsIntegrationTesting {
         }
         
         ConfigurationManager.loadProperties(props);
-
 
         try {
             client.findFrob(FROB_ID);
@@ -92,6 +104,25 @@ public class Codahale3MetricsIntegrationTesting {
         } catch (HystrixRuntimeException e) {
             assertThat(e.getFailureType(), is(HystrixRuntimeException.FailureType.SHORTCIRCUIT));
         }
+        try {
+            client.frobString(FROB_ID);
+            checkFrobMethod(metricRegistry, "frobString");
+        } catch (HystrixRuntimeException e) {
+            assertThat(e.getFailureType(), is(HystrixRuntimeException.FailureType.SHORTCIRCUIT));
+        }
+        try {
+            client.frobJsonError();
+            checkFrobMethod(metricRegistry, "frobJsonError");
+        } catch (HystrixRuntimeException e) {
+            assertThat(e.getFailureType(), is(HystrixRuntimeException.FailureType.SHORTCIRCUIT));
+        }
+        try {
+            client.frobErrorResponse();
+            checkFrobMethod(metricRegistry, "frobErrorResponse");
+        } catch (HystrixRuntimeException e) {
+            assertThat(e.getFailureType(), is(HystrixRuntimeException.FailureType.SHORTCIRCUIT));
+        }
+
 
     }
 
