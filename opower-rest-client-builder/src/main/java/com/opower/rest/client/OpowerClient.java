@@ -11,11 +11,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
+import com.netflix.hystrix.HystrixCircuitBreaker;
 import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
 import com.netflix.hystrix.HystrixCommandProperties;
 import com.netflix.hystrix.HystrixThreadPoolProperties;
-import com.netflix.hystrix.strategy.HystrixPlugins;
 import com.opower.auth.resources.oauth2.AccessTokenResource;
 import com.opower.metrics.FactoryLoaders;
 import com.opower.metrics.MetricsProvider;
@@ -35,7 +35,6 @@ import com.opower.rest.client.generator.core.UriProvider;
 import com.opower.rest.client.generator.executors.ApacheHttpClient4Executor;
 import com.opower.rest.client.generator.hystrix.HystrixClient;
 import com.opower.rest.client.http.ExponentialRetryStrategy;
-import com.opower.rest.client.hystrix.OpowerEventNotifier;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
@@ -419,7 +418,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
         if (this.metricsProvider.isPresent()) {
             result = InstrumentedClientInvocationHandler.instrument(this.resourceInterface.getInterface(),
                                                                     client, this.metricsProvider.get());
-            registerForShortCircuitSensuChecks();
+            registerForShortCircuitGauges();
 
             configureSensuPublishing();
         }
@@ -435,10 +434,27 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
         }
     }
 
-    private void registerForShortCircuitSensuChecks() {
+    private void registerForShortCircuitGauges() {
         for (HystrixCommandKey commandKey : super.commandKeyMap.values()) {
-            OpowerEventNotifier.registerClient(commandKey, this.clientId, this.metricsProvider.get());
+            registerClient(commandKey, this.clientId, this.metricsProvider.get());
         }
+    }
+
+    private void registerClient(final HystrixCommandKey key, String clientName, MetricsProvider metricsProvider) {
+        checkArgument(clientName != null && clientName.trim().length() > 0);
+        metricsProvider.gauge(String.format("%s.circuitbreaker.open", key.name()), new MetricsProvider.Gauge<Integer>() {
+            @Override
+            public Integer getValue() {
+                HystrixCircuitBreaker hcb = HystrixCircuitBreaker.Factory.getInstance(key);
+                if (hcb == null) {
+                    return 0;
+                } else {
+                    // if we don't allow requests, it's because the circuit breaker is effectively open.
+                    // That could be because the breaker was forced open, or because it was tripped.
+                    return hcb.allowRequest() ? 0 : 1;
+                }
+            }
+        });
     }
 
     /**
@@ -496,10 +512,6 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
      * @author chris.phillips
      */
     public static final class Builder<T> extends OpowerClient<T, Builder<T>> {
-
-        static {
-            HystrixPlugins.getInstance().registerEventNotifier(new OpowerEventNotifier());
-        }
 
         /**
          * Creates an OpowerClient.Builder instance that will use an alternate UriProvider (rather than the default
