@@ -3,6 +3,8 @@
 - added @ResourceMetadata annotation to make service writers instead of service consumers responsible for specifying serviceName and modelPackages
 - fixed bug that required specifying a separate UriProvider when using auth
 - upgraded to rest-client-tools 1.1.2 (The open source artifacts)
+- simplified metrics about hystrix short-circuits, removed buggy short circuit count metric that was prone to race conditions
+- fixed metric tests to actually check for the existence of the varioius metrics. Previously it wasn't actually reaching the method that did the assertions.
 
 1.0.10
 ------
