@@ -140,7 +140,6 @@
                             <test>com.opower.rest.test.Codahale3MetricsIntegrationTesting</test>
                             <reuseForks>false</reuseForks>
                         </configuration>
-                            
                     </execution>
                 </executions>
             </plugin>

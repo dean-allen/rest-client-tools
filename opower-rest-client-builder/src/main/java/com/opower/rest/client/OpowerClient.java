@@ -23,6 +23,8 @@ import com.opower.metrics.MetricsProviderFactory;
 import com.opower.metrics.SensuConfiguration;
 import com.opower.metrics.SensuPublisherFactory;
 import com.opower.rest.client.curator.CuratorUriProvider;
+import com.opower.rest.client.envelope.EnvelopeErrorInterceptor;
+import com.opower.rest.client.envelope.EnvelopeJacksonProvider;
 import com.opower.rest.client.filters.RequestIdFilter;
 import com.opower.rest.client.filters.ServiceNameClientRequestFilter;
 import com.opower.rest.client.filters.auth.AuthorizationClientRequestFilter;
@@ -70,7 +72,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
             .setDateFormat(new ISO8601DateFormat());
 
     private final ObjectMapper objectMapper = DEFAULT_OBJECT_MAPPER.copy();
-    private final JacksonJsonProvider jacksonJsonProvider = new JacksonJsonProvider(this.objectMapper)
+    private JacksonJsonProvider jacksonJsonProvider = new JacksonJsonProvider(this.objectMapper)
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     private final String serviceName;
     private final String clientId;
@@ -350,6 +352,23 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
                                     "tokenTtlRefresh [%d] must be greater than or equal to 0",
                                     tokenTtlRefresh);
         this.tokenTtlRefresh = tokenTtlRefresh;
+        return (B) this;
+    }
+
+    /**
+     * This allows the client to unwrap response and error objects wrapped according to the X-OPOWER-JsonEnvelope
+     * specification.
+     *
+     * Invoking this method changes your jackson json provider to:
+     * {@link com.opower.rest.client.envelope.EnvelopeJacksonProvider} and sets the client error interceptor to:
+     * {@link com.opower.rest.client.envelope.EnvelopeErrorInterceptor}.
+     *
+     * @return the builder
+     */
+    @SuppressWarnings("unchecked")
+    public B useJsonEnvelopes() {
+        this.jacksonJsonProvider = new EnvelopeJacksonProvider();
+        this.clientErrorInterceptors = ImmutableList.<ClientErrorInterceptor>of(new EnvelopeErrorInterceptor());
         return (B) this;
     }
 

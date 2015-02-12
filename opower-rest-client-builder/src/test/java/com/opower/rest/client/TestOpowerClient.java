@@ -41,6 +41,7 @@ public class TestOpowerClient {
     public static void init() {
         System.setProperty("javax.ws.rs.ext.RuntimeDelegate","com.opower.rest.client.generator.core.BasicRuntimeDelegate");
     }
+
     /**
      * By default each hystrixcommand gets its own thread pool with a core size of 10. The connection pool for the httpclient
      * shoudl have 10 * the number of methods on the resource interface by default; That ensures it can handle the max number of
