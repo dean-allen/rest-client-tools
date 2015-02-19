@@ -70,7 +70,12 @@ public class ExceptionMapperInterceptor implements ClientErrorInterceptor {
         }
     }
 
-    private static ErrorResponse.ErrorDetails getErrorDetails(ClientResponse response) {
+    /**
+     * Extracts the error details from the given {@link com.opower.rest.client.generator.core.ClientResponse}.
+     * @param response the ClientResponse object to be handled.
+     * @return a possibly null instance of ErrorDetails containing information about the request failure.
+     */
+    protected ErrorResponse.ErrorDetails getErrorDetails(ClientResponse response) {
         ErrorResponse errorResponse;
         try {
             errorResponse = response.getEntity(ErrorResponse.class);
@@ -95,6 +100,7 @@ public class ExceptionMapperInterceptor implements ClientErrorInterceptor {
 
     /**
      * Read the response body into a String.
+     *
      * @param response the response to read
      * @return the response body as a String
      */
@@ -122,8 +128,15 @@ public class ExceptionMapperInterceptor implements ClientErrorInterceptor {
             return null;
         }
     }
-    
-    private static ErrorResponse.ErrorDetails errorWithResponseBody(ClientResponse response) {
+
+    /**
+     * Creates an {@link com.opower.rest.ErrorResponse} from the given
+     * {@link com.opower.rest.client.generator.core.ClientResponse} if found else returns the EMPTY_RESPONSE.
+     *
+     * @param response the ClientResponse object to be handled.
+     * @return the error details found in the response or the EMPTY_DETAILS object if none found.
+     */
+    protected static ErrorResponse.ErrorDetails errorWithResponseBody(ClientResponse response) {
         String body = fetchResponseBody(response);
         if (body != null) {
             return new ErrorResponse(response.getStatus(), null, body).getError();

@@ -1,3 +1,7 @@
+1.1.1
+-----
+- adds support for X-OPOWER-JsonEnvelope based services. Users may now enable their clients to unwrap errors and responses sent in wrappers like { "response": { <my response object> } }.
+
 1.1.0
 -----
 - added @ResourceMetadata annotation to make service writers instead of service consumers responsible for specifying serviceName and modelPackages

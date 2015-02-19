@@ -151,6 +151,15 @@ All method invocations on client proxies are wrapped with a HystrixCommand objec
             }
     });
 
+Use for X-OPOWER-JsonEnvelope Services
+---------------------------------------
+
+If you need to use opower-rest-client-tools to interact with bertha, scrapi or any X-OPOWER-JsonEnvelope service you can configure you client like:
+
+    clientBuilder.useJsonEnvelope();
+
+This will set your Jackson processor and error interceptor to versions that expect to unwrap responses and errors. All other configuration
+options function normally.
 
 ######Releasing new version
 1. Run the [Jenkins job](https://jenkins-dev.va.opower.it/job/rest-client-tools-release)
