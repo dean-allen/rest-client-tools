@@ -7,7 +7,6 @@ import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
@@ -36,13 +35,16 @@ import com.opower.rest.client.generator.core.ClientRequestFilter;
 import com.opower.rest.client.generator.core.UriProvider;
 import com.opower.rest.client.generator.executors.ApacheHttpClient4Executor;
 import com.opower.rest.client.generator.hystrix.HystrixClient;
+import com.opower.rest.client.http.AutoRetryAuthorizationRefreshHttpClient;
 import com.opower.rest.client.http.ExponentialRetryStrategy;
+import com.opower.rest.client.http.UnauthorizedRetryStrategy;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.ServiceUnavailableRetryStrategy;
 import org.apache.http.impl.client.AutoRetryHttpClient;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
@@ -70,6 +72,8 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
             .registerModule(new GuavaModule())
             .registerModule(new JodaModule())
             .setDateFormat(new ISO8601DateFormat());
+    private static final int DEFAULT_TOKEN_REFRESH_ATTEMPTS = 1;
+    private static final int DEFAULT_TOKEN_REFRESH_ATTEMPT_INTERVAL = 100;
 
     private final ObjectMapper objectMapper = DEFAULT_OBJECT_MAPPER.copy();
     private JacksonJsonProvider jacksonJsonProvider = new JacksonJsonProvider(this.objectMapper)
@@ -87,6 +91,9 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     private Optional<MetricsProvider> metricsProvider = Optional.absent();
     private Optional<SensuConfiguration.Setter> sensuConfiguration = Optional.of(new SensuConfiguration.Setter());
     private Predicate<String> metricPublishingFilter = Predicates.<String>alwaysTrue();
+    private int tokenRefreshAttempts = DEFAULT_TOKEN_REFRESH_ATTEMPTS;
+    private int tokenRefreshAttemptInterval = DEFAULT_TOKEN_REFRESH_ATTEMPT_INTERVAL;
+
     /**
      * Creates an OpowerClient instance that will use an alternate UriProvider (rather than the default
      * CuratorUriProvider you get when using the other constructor). You should have a really good reason to use this
@@ -348,14 +355,13 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
      */
     @SuppressWarnings("unchecked")
     public B tokenTtlRefreshSeconds(int tokenTtlRefresh) {
-        Preconditions.checkArgument(tokenTtlRefresh >= 0,
-                                    "tokenTtlRefresh [%d] must be greater than or equal to 0",
-                                    tokenTtlRefresh);
+        checkArgument(tokenTtlRefresh >= 0, "tokenTtlRefresh [%d] must be greater than or equal to 0", tokenTtlRefresh);
         this.tokenTtlRefresh = tokenTtlRefresh;
         return (B) this;
     }
 
     /**
+
      * This allows the client to unwrap response and error objects wrapped according to the X-OPOWER-JsonEnvelope
      * specification.
      *
@@ -369,6 +375,32 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     public B useJsonEnvelopes() {
         this.jacksonJsonProvider = new EnvelopeJacksonProvider();
         this.clientErrorInterceptors = ImmutableList.<ClientErrorInterceptor>of(new EnvelopeErrorInterceptor());
+        return (B) this;
+    }
+    
+    /**
+     * The number of times to attempt to refresh the access token when a request results in a 401 Unauthorized status.
+     *
+     * @param tokenRefreshAttempts the number of times to attempt to refresh the access token when a request results in a 
+     *                             401 Unauthorized status
+     * @return the builder
+     */
+    @SuppressWarnings("unchecked")
+    public B tokenRefreshAttempts(int tokenRefreshAttempts) {
+        this.tokenRefreshAttempts = tokenRefreshAttempts;
+        return (B) this;
+    }
+
+    /**
+     * The interval, in milliseconds, until a failed request should have it's access token refreshed.
+     *
+     * @param tokenRefreshAttemptInterval the interval, in milliseconds, until a failed request should have it's access token 
+     *                                    refreshed.
+     * @return the builder
+     */
+    @SuppressWarnings("unchecked")
+    public B tokenRefreshAttemptInterval(int tokenRefreshAttemptInterval) {
+        this.tokenRefreshAttemptInterval = tokenRefreshAttemptInterval;
         return (B) this;
     }
 
@@ -385,9 +417,8 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
         poolingClientConnectionManager.setMaxTotal(totalSize);
         poolingClientConnectionManager.setDefaultMaxPerRoute(totalSize);
 
-        AutoRetryHttpClient client = new AutoRetryHttpClient(
-                new DefaultHttpClient(poolingClientConnectionManager),
-                this.retryStrategy);
+        AutoRetryHttpClient client = new AutoRetryHttpClient(new DefaultHttpClient(poolingClientConnectionManager),
+                                                             this.retryStrategy);
         if (this.httpClientParams.isPresent()) {
             this.httpClientParams.get().configure(client.getParams());
         }
@@ -402,34 +433,28 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
         return this.commandPropertiesMap;
     }
 
-    private void setUpAuthorization() {
-        if (this.clientSecret.isPresent()) {
+    private Oauth2AccessTokenRequester createOauth2AccessTokenRequester() {
+        UriProvider uriProviderToUse = this.uriProvider;
 
-            UriProvider uriProviderToUse = this.uriProvider;
-
-            if (this.serviceDiscovery.isPresent()) {
-                uriProviderToUse = new CuratorUriProvider(this.serviceDiscovery.get(), AUTH_SERVICE_NAME);
-            } else if (this.authUriProvider.isPresent()) {
-                uriProviderToUse = this.authUriProvider.get();
-            }
-
-            BasicAuthCredentials credentials = new BasicAuthCredentials(this.clientId, this.clientSecret.get());
-            AccessTokenResource accessTokenResource = new Client.Builder<>(new OpowerResourceInterface<>(AccessTokenResource.class),
-                              uriProviderToUse)
-                    .clientErrorInterceptors(this.clientErrorInterceptors)
-                    .executor(new ApacheHttpClient4Executor(prepareHttpClient(),
-                                                            ImmutableList.of(new RequestIdFilter(),
-                                                                             new ServiceNameClientRequestFilter(
-                                                                                     AUTH_SERVICE_NAME),
-                                                                             new AuthorizationClientRequestFilter(credentials))))
-                    .registerProviderInstance(this.jacksonJsonProvider)
-                    .build();
-
-            addClientRequestFilter(
-                    new Oauth2CredentialRequestingClientRequestFilter(
-                            new Oauth2AccessTokenRequester(accessTokenResource,
-                                                           this.tokenTtlRefresh)));
+        if (this.serviceDiscovery.isPresent()) {
+            uriProviderToUse = new CuratorUriProvider(this.serviceDiscovery.get(), AUTH_SERVICE_NAME);
+        } else if (this.authUriProvider.isPresent()) {
+            uriProviderToUse = this.authUriProvider.get();
         }
+
+        BasicAuthCredentials credentials = new BasicAuthCredentials(this.clientId, this.clientSecret.get());
+        AccessTokenResource accessTokenResource = new Client.Builder<>(new OpowerResourceInterface<>(AccessTokenResource.class),
+                                                                       uriProviderToUse)
+                .clientErrorInterceptors(this.clientErrorInterceptors)
+                .executor(new ApacheHttpClient4Executor(prepareHttpClient(),
+                                                        ImmutableList.of(new RequestIdFilter(),
+                                                                         new ServiceNameClientRequestFilter(
+                                                                                 AUTH_SERVICE_NAME),
+                                                                         new AuthorizationClientRequestFilter(credentials))))
+                .registerProviderInstance(this.jacksonJsonProvider)
+                .build();
+
+        return new Oauth2AccessTokenRequester(accessTokenResource, this.tokenTtlRefresh);
     }
 
     private T configureMetrics(T client) {
@@ -490,7 +515,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
                                   + TimeUnit.SECONDS.toMillis(1);
                 Integer currentSetting = setter.getExecutionIsolationThreadTimeoutInMilliseconds();
                 if (currentSetting == null || currentSetting < minTimeout) {
-                    setter.withExecutionIsolationThreadTimeoutInMilliseconds((int)minTimeout);
+                    setter.withExecutionIsolationThreadTimeoutInMilliseconds((int) minTimeout);
                 }
             }
         });
@@ -503,10 +528,21 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
      */
     @Override
     public T build()  {
-        setUpAuthorization();
+        HttpClient client = prepareHttpClient();
+        if (this.clientSecret.isPresent()) {
+            Oauth2AccessTokenRequester oauth2AccessTokenRequester = createOauth2AccessTokenRequester();
+            addClientRequestFilter(new Oauth2CredentialRequestingClientRequestFilter(oauth2AccessTokenRequester));
+            ServiceUnavailableRetryStrategy unauthorizedRetryStrategy 
+                = new UnauthorizedRetryStrategy(this.tokenRefreshAttempts, this.tokenRefreshAttemptInterval);
+            client = new AutoRetryAuthorizationRefreshHttpClient(client,
+                                                                 oauth2AccessTokenRequester,
+                                                                 unauthorizedRetryStrategy,
+                                                                 this.tokenRefreshAttempts);
+        }
+
         hystrixCommandTimeout();
 
-        super.executor(new ApacheHttpClient4Executor(prepareHttpClient(), this.clientRequestFilters))
+        super.executor(new ApacheHttpClient4Executor(client, this.clientRequestFilters))
              .clientErrorInterceptors(this.clientErrorInterceptors)
              .registerProviderInstance(this.jacksonJsonProvider);
         return configureMetrics(super.build());
@@ -517,7 +553,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
      * defaults for the Opower landscape. By default, the client will
      * - use curator to resolve server urls,
      * - collect timing metrics
-     * - publish metrics to sensu for reporting in OpenTSDB
+     * - publish metrics to Sensu for reporting in OpenTSDB
      * - execute each method as a customizable HystrixCommand
      * - use Jackson for serialization
      * <p/>
@@ -640,7 +676,5 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
         public Builder(OpowerResourceInterface<T> resourceInterface, UriProvider uriProvider, String clientId) {
             super(resourceInterface, uriProvider, resourceInterface.getServiceName().orNull(), clientId);
         }
-
-
     }
 }

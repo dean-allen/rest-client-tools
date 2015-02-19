@@ -1,6 +1,7 @@
 1.1.1
 -----
 - adds support for X-OPOWER-JsonEnvelope based services. Users may now enable their clients to unwrap errors and responses sent in wrappers like { "response": { <my response object> } }.
+- adds support for retrying requests that return a 401 (unauthorized) response.
 
 1.1.0
 -----
