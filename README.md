@@ -1,7 +1,7 @@
 opower-rest-client-tools
 =================
 
-[![Build Status](http://jenkins-dev.va.opower.it/job/rest-client-tools/badge/icon)](http://jenkins-dev.va.opower.it/job/rest-client-tools/)
+[![Build Status](http://jenkins-dev.va.opower.it/job/opower-rest-client-tools/badge/icon)](http://jenkins-dev.va.opower.it/job/opower-rest-client-tools/)
 
 Portions of rest-client-tools have been open sourced -- checkout the README [here](https://github.com/opower/rest-client-tools)
 
