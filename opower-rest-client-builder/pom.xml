@@ -37,7 +37,7 @@
         <dependency>
             <groupId>com.opower</groupId>
             <artifactId>auth-common</artifactId>
-            <version>1.0.1</version>
+            <version>1.0.2</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
@@ -75,6 +75,16 @@
             <version>2.4.2</version>
         </dependency>
         <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
+            <version>2.0</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <!--===========================================================-->
+        <!--============ Testing Dependencies =========================-->
+        <!--===========================================================-->
+        <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-test</artifactId>
             <version>2.4.2</version>
@@ -85,12 +95,6 @@
             <artifactId>rest-client-test</artifactId>
             <version>${rest.client.tools.version}</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>javax.ws.rs</groupId>
-            <artifactId>javax.ws.rs-api</artifactId>
-            <version>2.0</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>javax.ws.rs</groupId>
@@ -137,7 +141,7 @@
                                 <additionalClasspathElement>${settings.localRepository}/com/sun/jersey/jersey-server/1.17.1/jersey-server-1.17.1.jar</additionalClasspathElement>
                                 <additionalClasspathElement>${settings.localRepository}/com/sun/jersey/jersey-servlet/1.17.1/jersey-servlet-1.17.1.jar</additionalClasspathElement>
                             </additionalClasspathElements>
-                            <test>com.opower.rest.test.Codahale3MetricsIntegrationTesting</test>
+                            <test>com.opower.rest.test.IntTestOpowerClient,com.opower.rest.test.Codahale3MetricsIntegrationTesting</test>
                             <reuseForks>false</reuseForks>
                         </configuration>
                     </execution>

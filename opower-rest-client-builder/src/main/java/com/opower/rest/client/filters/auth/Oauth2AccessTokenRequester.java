@@ -98,9 +98,22 @@ public class Oauth2AccessTokenRequester {
     }
 
     /**
-     * Attempts to refresh the OAuth2 access token.
+     * Attempts to generates a new access token. This method should only be called once a token becomes 
+     * invalid, i.e. expired. When a token is not yet invalid, the token value will remain the same.
+     * 
+     * This method always calls the auth service even if there is a cached access token.
+     *
+     * @see #getAccessToken()
+     *
+     * @return the {@link BearerAuthCredentials}.
      */
-    private void refreshAccessToken() {
+    public BearerAuthCredentials refreshAccessToken() {
+        // This is not synchronized here because any thread(s) calling this should know that it is not so.
+        // #getAccessToken was synchronized as a performance improvement to avoid flooding the authorization
+        // service with requests to get a token, however, once a token is refreshed it is not changed until
+        // that token expires. Callers of this method should only call this in race conditions so even if there
+        // are multiple threads calling this method (resulting in multiple requests to the authorization service)
+        // the resulting token will be exactly the same.
         AccessTokenResponse response = this.accessTokenClient.tokenEndpoint(null, GrantType.CLIENT_CREDENTIALS.alias());
         LOG.debug("Access token for client [%s] refreshed. Expires in %d",
                   response.getClientId(),
@@ -108,5 +121,7 @@ public class Oauth2AccessTokenRequester {
 
         setExpiresTimeInSeconds(response.getExpiresIn());
         this.bearerCredentials = new BearerAuthCredentials(new BearerToken(response.getAccessToken()));
+
+        return this.bearerCredentials;
     }
 }
