@@ -1,13 +1,13 @@
 package com.opower.rest.client;
 
-import com.google.common.collect.Iterables;
 import com.netflix.hystrix.HystrixCommandProperties;
 import com.netflix.hystrix.HystrixThreadPoolProperties;
 import com.opower.rest.client.generator.core.SimpleUriProvider;
 import com.opower.rest.client.generator.core.UriProvider;
+import com.opower.rest.test.AnnotatedFrobResource;
 import com.opower.rest.test.resource.FrobResource;
 import java.lang.reflect.Method;
-import java.util.Collection;
+
 import org.apache.http.client.HttpClient;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.junit.BeforeClass;
@@ -43,13 +43,57 @@ public class TestOpowerClient {
     }
 
     /**
+     *  Ensures the proper thread pool queueing settings are applied by default.
+     */
+    @Test
+    public void defaultHystrixThreadPoolQueueing() {
+        OpowerClient opowerClient = new OpowerClient.Builder<>(AnnotatedFrobResource.class, URI_PROVIDER, CLIENT_ID);
+        opowerClient.threadPoolProperties(new ConfigurationCallback<HystrixThreadPoolProperties.Setter>() {
+            @Override
+            public void configure(HystrixThreadPoolProperties.Setter setter) {
+                setter.withCoreSize(ELEVEN);
+            }
+        });
+
+        opowerClient.hystrixCommandDefaults();
+
+        for (HystrixThreadPoolProperties.Setter setter : (Iterable<HystrixThreadPoolProperties.Setter>)
+                opowerClient.getThreadPoolPropertiesMap().values()) {
+            assertThat(setter.getMaxQueueSize(), is(Integer.MAX_VALUE));
+            assertThat(setter.getQueueSizeRejectionThreshold(), is(TEN * ELEVEN));
+        }
+    }
+
+    /**
+     *  Ensures that previously set queueing settings are respected.
+     */
+    @Test
+    public void adjustedThreadPoolQueueing() {
+        OpowerClient opowerClient = new OpowerClient.Builder<>(AnnotatedFrobResource.class, URI_PROVIDER, CLIENT_ID);
+        opowerClient.threadPoolProperties(new ConfigurationCallback<HystrixThreadPoolProperties.Setter>() {
+            @Override
+            public void configure(HystrixThreadPoolProperties.Setter setter) {
+                setter.withMaxQueueSize(TWENTY_SECONDS);
+                setter.withQueueSizeRejectionThreshold(TEN);
+            }
+        });
+        opowerClient.hystrixCommandDefaults();
+        for (HystrixThreadPoolProperties.Setter setter : (Iterable<HystrixThreadPoolProperties.Setter>)
+                opowerClient.getThreadPoolPropertiesMap().values()) {
+            assertThat(setter.getMaxQueueSize(), is(TWENTY_SECONDS));
+            assertThat(setter.getQueueSizeRejectionThreshold(), is(TEN));
+        }
+    }
+
+
+    /**
      * By default each hystrixcommand gets its own thread pool with a core size of 10. The connection pool for the httpclient
      * shoudl have 10 * the number of methods on the resource interface by default; That ensures it can handle the max number of
      * concurrent commands as hystrix will allow.
      */
     @Test
     public void defaultHystrixThreadPoolSizeDictatesHttpClientPoolConfiguration() {
-        OpowerClient opowerClient = new OpowerClient.Builder<>(FrobResource.class, URI_PROVIDER, SERVICE_NAME, CLIENT_ID);
+        OpowerClient opowerClient = new OpowerClient.Builder<>(AnnotatedFrobResource.class, URI_PROVIDER, CLIENT_ID);
         HttpClient client = opowerClient.prepareHttpClient();
         PoolingClientConnectionManager connectionManager = (PoolingClientConnectionManager)client.getConnectionManager();
         assertThat(connectionManager.getMaxTotal(), is(EXPECTED_POOL_SIZE));
@@ -63,8 +107,8 @@ public class TestOpowerClient {
      */
     @Test
     public void adjustedHystrixThreadPoolSizeDictatesHttpClientPoolConfiguration() throws Exception {
-        OpowerClient opowerClient = new OpowerClient.Builder<>(FrobResource.class, URI_PROVIDER, SERVICE_NAME, CLIENT_ID);
-        Method findFrob = FrobResource.class.getMethod("findFrob", String.class);
+        OpowerClient opowerClient = new OpowerClient.Builder<>(AnnotatedFrobResource.class, URI_PROVIDER, CLIENT_ID);
+        Method findFrob = AnnotatedFrobResource.class.getMethod("findFrob", String.class);
         opowerClient.methodThreadPoolProperties(findFrob, new ConfigurationCallback<HystrixThreadPoolProperties.Setter>() {
             @Override
             public void configure(HystrixThreadPoolProperties.Setter setter) {
@@ -83,11 +127,13 @@ public class TestOpowerClient {
      */
     @Test
     public void defaultHystrixTimeout() throws Exception {
-        OpowerClient opowerClient = new OpowerClient.Builder<>(FrobResource.class, URI_PROVIDER, SERVICE_NAME, CLIENT_ID);
-        opowerClient.hystrixCommandTimeout();
-        Collection<HystrixCommandProperties.Setter> setters = opowerClient.getCommandPropertiesMap().values();
-        HystrixCommandProperties.Setter setter = Iterables.getFirst(setters, null);
-        assertThat(setter.getExecutionIsolationThreadTimeoutInMilliseconds(), is(SEVEN_SECONDS));
+        OpowerClient opowerClient = new OpowerClient.Builder<>(AnnotatedFrobResource.class, URI_PROVIDER, CLIENT_ID);
+        opowerClient.hystrixCommandDefaults();
+        for (HystrixCommandProperties.Setter setter : (Iterable<HystrixCommandProperties.Setter>)
+                opowerClient.getCommandPropertiesMap().values()) {
+            assertThat(setter.getExecutionIsolationThreadTimeoutInMilliseconds(), is(SEVEN_SECONDS));
+
+        }
     }
 
     /**
@@ -97,17 +143,19 @@ public class TestOpowerClient {
      */
     @Test
     public void hystrixTimeoutSetTooLow() throws Exception {
-        OpowerClient opowerClient = new OpowerClient.Builder<>(FrobResource.class, URI_PROVIDER, SERVICE_NAME, CLIENT_ID);
+        OpowerClient opowerClient = new OpowerClient.Builder<>(AnnotatedFrobResource.class, URI_PROVIDER, CLIENT_ID);
         opowerClient.commandProperties(new ConfigurationCallback<HystrixCommandProperties.Setter>() {
             @Override
             public void configure(HystrixCommandProperties.Setter setter) {
                 setter.withExecutionIsolationThreadTimeoutInMilliseconds(TWO_SECONDS);
             }
         });
-        opowerClient.hystrixCommandTimeout();
-        Collection<HystrixCommandProperties.Setter> setters = opowerClient.getCommandPropertiesMap().values();
-        HystrixCommandProperties.Setter setter = Iterables.getFirst(setters, null);
-        assertThat(setter.getExecutionIsolationThreadTimeoutInMilliseconds(), is(SEVEN_SECONDS));
+        opowerClient.hystrixCommandDefaults();
+        for (HystrixCommandProperties.Setter setter : (Iterable<HystrixCommandProperties.Setter>)
+                opowerClient.getCommandPropertiesMap().values()) {
+            assertThat(setter.getExecutionIsolationThreadTimeoutInMilliseconds(), is(SEVEN_SECONDS));
+
+        }
     }
 
     /**
@@ -116,17 +164,19 @@ public class TestOpowerClient {
      */
     @Test
     public void longerHystrixTimeoutsAreAccepted() throws Exception {
-        OpowerClient opowerClient = new OpowerClient.Builder<>(FrobResource.class, URI_PROVIDER, SERVICE_NAME, CLIENT_ID);
+        OpowerClient opowerClient = new OpowerClient.Builder<>(AnnotatedFrobResource.class, URI_PROVIDER, CLIENT_ID);
         opowerClient.commandProperties(new ConfigurationCallback<HystrixCommandProperties.Setter>() {
             @Override
             public void configure(HystrixCommandProperties.Setter setter) {
                 setter.withExecutionIsolationThreadTimeoutInMilliseconds(TWENTY_SECONDS);
             }
         });
-        opowerClient.hystrixCommandTimeout();
-        Collection<HystrixCommandProperties.Setter> setters = opowerClient.getCommandPropertiesMap().values();
-        HystrixCommandProperties.Setter setter = Iterables.getFirst(setters, null);
-        assertThat(setter.getExecutionIsolationThreadTimeoutInMilliseconds(), is(TWENTY_SECONDS));
+        opowerClient.hystrixCommandDefaults();
+        for (HystrixCommandProperties.Setter setter : (Iterable<HystrixCommandProperties.Setter>)
+                opowerClient.getCommandPropertiesMap().values()) {
+            assertThat(setter.getExecutionIsolationThreadTimeoutInMilliseconds(), is(TWENTY_SECONDS));
+
+        }
     }
 
 }
