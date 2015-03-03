@@ -64,6 +64,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     public static final String AUTH_SERVICE_NAME = "authorization-v1";
 
     private static final int DEFAULT_TOKEN_TTL_REFRESH = 2;
+    private static final int THREAD_POOL_QUEUEING_FACTOR = 10;
     private static final int DEFAULT_HYSTRIX_THREAD_POOL_SIZE = 10;
     private static final String VALID_CLIENT_NAME_PATTERN = "[a-zA-Z0-9\\-\\.]+";
     private static final MetricsProviderFactory METRICS_PROVIDER_FACTORY = FactoryLoaders.METRIC_PROVIDER.load();
@@ -433,6 +434,14 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
         return this.commandPropertiesMap;
     }
 
+    /**
+     * Visible for testing.
+     * @return the Map of methods to HystrixThreadPoolProperties.Setter
+     */
+    Map<Method, HystrixThreadPoolProperties.Setter> getThreadPoolPropertiesMap() {
+        return this.threadPoolPropertiesMap;
+    }
+
     private Oauth2AccessTokenRequester createOauth2AccessTokenRequester() {
         UriProvider uriProviderToUse = this.uriProvider;
 
@@ -502,9 +511,32 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     }
 
     /**
+     *
+     * Thread Pool queueing:
+     * Hystrix defaults: http://goo.gl/yNI5KU
+     * Spring defaults: http://goo.gl/BsTL1A
+     * It seems to have surprised people that we use the SynchronousQueue by default.
+     * To allow for dynamic sizing, Hystrix provides the queueSizeRejectionThreshold setting.
+     *
      * Visible for testing.
      */
-    void hystrixCommandTimeout() {
+    void hystrixCommandDefaults() {
+
+        threadPoolProperties(new ConfigurationCallback<HystrixThreadPoolProperties.Setter>() {
+            @Override
+            public void configure(HystrixThreadPoolProperties.Setter setter) {
+
+                if (setter.getMaxQueueSize() == null) {
+                    setter.withMaxQueueSize(Integer.MAX_VALUE);
+                }
+
+                if (setter.getQueueSizeRejectionThreshold() == null) {
+                    int corePoolSize = setter.getCoreSize() == null ? DEFAULT_HYSTRIX_THREAD_POOL_SIZE : setter.getCoreSize();
+                    // This is the effective queue max size and can be dynamically configured.
+                    setter.withQueueSizeRejectionThreshold(corePoolSize * THREAD_POOL_QUEUEING_FACTOR);
+                }
+            }
+        });
 
         commandProperties(new ConfigurationCallback<HystrixCommandProperties.Setter>() {
             @Override
@@ -540,7 +572,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
                                                                  this.tokenRefreshAttempts);
         }
 
-        hystrixCommandTimeout();
+        hystrixCommandDefaults();
 
         super.executor(new ApacheHttpClient4Executor(client, this.clientRequestFilters))
              .clientErrorInterceptors(this.clientErrorInterceptors)
