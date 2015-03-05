@@ -3,6 +3,7 @@
 - adds support for X-OPOWER-JsonEnvelope based services. Users may now enable their clients to unwrap errors and responses sent in wrappers like { "response": { <my response object> } }.
 - adds support for retrying requests that return a 401 (unauthorized) response.
 - sets the default threadpool queueing behavior to be more in line with expectations
+- upgrade to the latest version of rest-client-tools open source artifacts 1.1.3
 
 1.1.0
 -----
