@@ -18,6 +18,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -81,7 +82,6 @@ public class Codahale3MetricsIntegrationTesting {
 
         this.metricRegistry = SharedMetricRegistries.getOrCreate(String.format("%s.client",SERVICE_NAME));
         assertThat(this.metricRegistry.getTimers().size(), is(FROB_METHOD_COUNT));
-        assertThat(this.metricRegistry.getCounters().size(), is(1));
 
         Properties props = new Properties();
         // force all the circuit breakers open
@@ -128,7 +128,7 @@ public class Codahale3MetricsIntegrationTesting {
         String timerName = String.format("%s.%s", FrobResource.class.getCanonicalName(), methodName);
         assertThat(this.metricRegistry.getTimers().get(timerName), notNullValue());
         String exceptionCounterName = timerName + "-Exception";
-        assertThat(this.metricRegistry.getCounters().get(exceptionCounterName), notNullValue());
+        assertThat(this.metricRegistry.getMeters().get(exceptionCounterName), notNullValue());
         String gaugeName = timerName + ".circuitbreaker.open";
         assertThat((int)this.metricRegistry.getGauges().get(gaugeName).getValue(), is(1));
     }
