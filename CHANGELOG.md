@@ -1,9 +1,14 @@
+1.1.2
+-----
+- upgrade to version 1.0.2 of metrics-providers. This fixes a busy-wait problem with the metrics publishing
+
 1.1.1
 -----
 - adds support for X-OPOWER-JsonEnvelope based services. Users may now enable their clients to unwrap errors and responses sent in wrappers like { "response": { <my response object> } }.
 - adds support for retrying requests that return a 401 (unauthorized) response.
 - sets the default threadpool queueing behavior to be more in line with expectations
 - upgrade to the latest version of rest-client-tools open source artifacts 1.1.3
+- upgrade to version 1.0.1 of metrics-providers to get all the pre-aggregated metrics back
 
 1.1.0
 -----
@@ -11,7 +16,7 @@
 - fixed bug that required specifying a separate UriProvider when using auth
 - upgraded to rest-client-tools 1.1.2 (The open source artifacts)
 - simplified metrics about hystrix short-circuits, removed buggy short circuit count metric that was prone to race conditions
-- fixed metric tests to actually check for the existence of the varioius metrics. Previously it wasn't actually reaching the method that did the assertions.
+- fixed metric tests to actually check for the existence of the various metrics. Previously it wasn't actually reaching the method that did the assertions.
 
 1.0.10
 ------
