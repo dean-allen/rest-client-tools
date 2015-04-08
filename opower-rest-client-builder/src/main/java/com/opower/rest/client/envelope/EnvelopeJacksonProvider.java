@@ -69,7 +69,9 @@ public class EnvelopeJacksonProvider extends JacksonJsonProvider {
         InputStream stream;
         if (httpHeaders.containsKey(HEADER_KEY)) {
             JsonNode root = readTree(entityStream);
-            stream = new ByteArrayInputStream(writeTree(root.get(RESPONSE_KEY)));
+
+            root = root.has(RESPONSE_KEY) ? root.get(RESPONSE_KEY) : root;
+            stream = new ByteArrayInputStream(writeTree(root));
         } else {
             stream = entityStream;
         }
