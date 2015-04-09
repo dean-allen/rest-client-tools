@@ -356,7 +356,7 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
      */
     @SuppressWarnings("unchecked")
     public B tokenTtlRefreshSeconds(int tokenTtlRefresh) {
-        checkArgument(tokenTtlRefresh >= 0, "tokenTtlRefresh [%d] must be greater than or equal to 0", tokenTtlRefresh);
+        checkArgument(tokenTtlRefresh >= 0, "tokenTtlRefresh [%s] must be greater than or equal to 0", tokenTtlRefresh);
         this.tokenTtlRefresh = tokenTtlRefresh;
         return (B) this;
     }
