@@ -3,6 +3,7 @@ package com.opower.rest.test;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
 import com.google.common.base.Throwables;
+import com.google.common.primitives.Primitives;
 import com.netflix.config.ConfigurationManager;
 import com.netflix.hystrix.HystrixCommandProperties;
 import com.netflix.hystrix.exception.HystrixRuntimeException;
@@ -11,6 +12,7 @@ import com.opower.rest.client.ConfigurationCallback;
 import com.opower.rest.client.OpowerClient;
 import com.opower.rest.client.generator.core.SimpleUriProvider;
 import com.opower.rest.client.generator.hystrix.HystrixClient;
+import com.opower.rest.client.generator.util.HttpResponseCodes;
 import com.opower.rest.test.jetty.JettyRule;
 import com.opower.rest.test.resource.Frob;
 import com.opower.rest.test.resource.FrobResource;
@@ -18,7 +20,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -29,20 +30,21 @@ import static org.junit.Assert.fail;
 
 /**
  * Tests for the integration with the codahale-3-metrics-provider.
+ *
  * @author chris.phillips
  */
 public class Codahale3MetricsIntegrationTesting {
-    
+
     public static final int PORT = 7000;
     @ClassRule
     public static final JettyRule JETTY_RULE = new JettyRule(PORT, Frob.class.getResource("/jersey/1/web.xml").toString());
     private static final ResourceMetadata RESOURCE_METADATA = AnnotatedFrobResource.class.getAnnotation(ResourceMetadata.class);
-    private static final String SERVICE_NAME = String.format("%s-v%d",RESOURCE_METADATA.serviceName(),
+    private static final String SERVICE_NAME = String.format("%s-v%d", RESOURCE_METADATA.serviceName(),
                                                              RESOURCE_METADATA.serviceVersion());
     private static final String CLIENT_ID = "client.id";
     private static final String FROB_ID = "frobId";
     private static final int FROB_METHOD_COUNT = FrobResource.class.getDeclaredMethods().length;
-    private static final int TIMEOUT = (int)TimeUnit.MINUTES.toMillis(10L);
+    private static final int TIMEOUT = (int) TimeUnit.MINUTES.toMillis(10L);
     private AnnotatedFrobResource client;
     private MetricRegistry metricRegistry;
 
@@ -52,8 +54,8 @@ public class Codahale3MetricsIntegrationTesting {
     @Test
     public void metricsAreRecorded() {
         this.client = new OpowerClient.Builder<>(AnnotatedFrobResource.class,
-                                                        new SimpleUriProvider("http://localhost:7000/"), 
-                                                        CLIENT_ID)
+                                                 new SimpleUriProvider("http://localhost:7000/"),
+                                                 CLIENT_ID)
                 .disableSensuPublishing()
                 .commandProperties(new ConfigurationCallback<HystrixCommandProperties.Setter>() {
                     @Override
@@ -62,7 +64,7 @@ public class Codahale3MetricsIntegrationTesting {
                     }
                 })
                 .build();
-        
+
         this.client.findFrob(FROB_ID);
         this.client.updateFrob(FROB_ID, FROB_ID);
         this.client.createFrob(new Frob(FROB_ID));
@@ -75,22 +77,22 @@ public class Codahale3MetricsIntegrationTesting {
         }
 
         try {
-            this.client.frobErrorResponse();
+            this.client.frobErrorResponse(HttpResponseCodes.SC_INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
             // ignore
         }
 
-        this.metricRegistry = SharedMetricRegistries.getOrCreate(String.format("%s.client",SERVICE_NAME));
+        this.metricRegistry = SharedMetricRegistries.getOrCreate(String.format("%s.client", SERVICE_NAME));
         assertThat(this.metricRegistry.getTimers().size(), is(FROB_METHOD_COUNT));
 
         Properties props = new Properties();
         // force all the circuit breakers open
         for (Method method : FrobResource.class.getMethods()) {
-            
-            props.put(String.format("hystrix.command.%s.circuitBreaker.forceOpen", 
+
+            props.put(String.format("hystrix.command.%s.circuitBreaker.forceOpen",
                                     HystrixClient.Builder.keyForMethod(method).name()), true);
         }
-        
+
         ConfigurationManager.loadProperties(props);
 
         checkMetrics("findFrob", FROB_ID);
@@ -98,7 +100,7 @@ public class Codahale3MetricsIntegrationTesting {
         checkMetrics("createFrob", new Frob(FROB_ID));
         checkMetrics("frobString", FROB_ID);
         checkMetrics("frobJsonError");
-        checkMetrics("frobErrorResponse");
+        checkMetrics("frobErrorResponse", HttpResponseCodes.SC_INTERNAL_SERVER_ERROR);
     }
 
     /**
@@ -108,11 +110,12 @@ public class Codahale3MetricsIntegrationTesting {
         try {
             Class[] paramTypes = new Class[args.length];
             for (int i = 0; i < args.length; i++) {
-                paramTypes[i] = args[i].getClass();
+                Class<?> argType = args[i].getClass();
+                paramTypes[i] = Primitives.isWrapperType(argType) ? Primitives.unwrap(argType) : argType;
             }
             try {
                 FrobResource.class.getDeclaredMethod(methodName, paramTypes).invoke(this.client, args);
-            } catch (NoSuchMethodException | IllegalAccessException  ex) {
+            } catch (NoSuchMethodException | IllegalAccessException ex) {
                 Throwables.propagate(ex);
             } catch (InvocationTargetException ex) {
                 Throwables.propagate(ex.getTargetException());
@@ -130,8 +133,6 @@ public class Codahale3MetricsIntegrationTesting {
         String exceptionCounterName = timerName + "-Exception";
         assertThat(this.metricRegistry.getMeters().get(exceptionCounterName), notNullValue());
         String gaugeName = timerName + ".circuitbreaker.open";
-        assertThat((int)this.metricRegistry.getGauges().get(gaugeName).getValue(), is(1));
+        assertThat((int) this.metricRegistry.getGauges().get(gaugeName).getValue(), is(1));
     }
-    
-   
 }
