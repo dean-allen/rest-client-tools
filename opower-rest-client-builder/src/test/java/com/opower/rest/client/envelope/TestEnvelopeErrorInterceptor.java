@@ -17,6 +17,8 @@ import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.verify;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * Tests for {@link com.opower.rest.client.envelope.EnvelopeErrorInterceptor}.
@@ -26,6 +28,13 @@ import static org.easymock.EasyMock.verify;
  */
 public class TestEnvelopeErrorInterceptor {
 
+    public static final String V1_0 = "v1.0";
+    public static final String HTTP_400 = "400";
+    public static final String MESSAGE = "message";
+    public static final String DETAILS = "details";
+    public static final String EXCEPTION_EXPECTED = "Should have thrown BadRequestException";
+    public static final String SHOULD_BE_400 = "Status code field should be " + HTTP_400;
+    public static final String SHOULD_BE_MESSAGE = "Service error code field should be " + MESSAGE;
     @Rule
     public ExpectedException testRuleExpectedException = ExpectedException.none();
 
@@ -75,24 +84,63 @@ public class TestEnvelopeErrorInterceptor {
     }
 
     /**
-     * Header found with error.
+     * Header found with error. Checks the mapping of a simple JSON error structure
+     * holding the following fields:
+     *
+     * - errorMessage (should map to service error code)
+     * - httpStatus (should map to status code)
      */
     @Test
-    public void testHeaderFoundWithEnvelope() {
-        this.testRuleExpectedException.expect(BadRequestException.class);
+    public void testSimpleErrorMapping() {
+        try {
+            MultivaluedMap<String, String> headers = new CaseInsensitiveMap<>();
+            headers.add(EnvelopeJacksonProvider.HEADER_KEY, V1_0);
 
-        MultivaluedMap<String, String> headers = new CaseInsensitiveMap<>();
-        headers.add(EnvelopeJacksonProvider.HEADER_KEY, "v1.0");
+            assertThrowsError(
+                    headers,
+                    ImmutableMap.of(
+                            EnvelopeErrorInterceptor.ERROR_KEY,
+                            ImmutableMap.of(
+                                    EnvelopeErrorInterceptor.ERROR_HTTP_STATUS_KEY, HTTP_400,
+                                    EnvelopeErrorInterceptor.ERROR_ERROR_MESSAGE_KEY, MESSAGE))
+            );
+            fail(EXCEPTION_EXPECTED);
+        } catch (BadRequestException e) {
+            assertEquals(SHOULD_BE_400, HTTP_400, String.valueOf(e.getStatusCode()));
+            assertEquals(SHOULD_BE_MESSAGE, MESSAGE, e.getServiceErrorCode());
+            assertEquals("Details field should be null", null, e.getMessage());
+        }
+    }
 
-        assertThrowsError(
-                headers,
-                ImmutableMap.of(
-                        EnvelopeErrorInterceptor.ERROR_KEY,
-                        ImmutableMap.of(
-                                EnvelopeErrorInterceptor.ERROR_STATUS_KEY, "400",
-                                EnvelopeErrorInterceptor.ERROR_MESSAGE_KEY, "message",
-                                EnvelopeErrorInterceptor.ERROR_DETAILS_KEY, "details"))
-        );
+    /**
+     * Header found with error. Checks the mapping of a detailed JSON error structure
+     * holding the following fields:
+     *
+     * - message (should map to service error code)
+     * - status (should map to status code)
+     * - details (should map to message)
+     */
+    @Test
+    public void testDetailedErrorMapping() {
+        try {
+            MultivaluedMap<String, String> headers = new CaseInsensitiveMap<>();
+            headers.add(EnvelopeJacksonProvider.HEADER_KEY, V1_0);
+
+            assertThrowsError(
+                    headers,
+                    ImmutableMap.of(
+                            EnvelopeErrorInterceptor.ERROR_KEY,
+                            ImmutableMap.of(
+                                    EnvelopeErrorInterceptor.ERROR_STATUS_KEY, HTTP_400,
+                                    EnvelopeErrorInterceptor.ERROR_DETAILS_KEY, DETAILS,
+                                    EnvelopeErrorInterceptor.ERROR_MESSAGE_KEY, MESSAGE))
+            );
+            fail(EXCEPTION_EXPECTED);
+        } catch (BadRequestException e) {
+            assertEquals(SHOULD_BE_400, HTTP_400, String.valueOf(e.getStatusCode()));
+            assertEquals(SHOULD_BE_MESSAGE, MESSAGE, e.getServiceErrorCode());
+            assertEquals("Details field should be 'details'", DETAILS, e.getMessage());
+        }
     }
 
     private static void assertThrowsError(MultivaluedMap<String, String> headers, Object responseEntity) {

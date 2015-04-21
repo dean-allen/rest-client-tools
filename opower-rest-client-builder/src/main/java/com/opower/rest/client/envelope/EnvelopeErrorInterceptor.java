@@ -24,15 +24,17 @@ public class EnvelopeErrorInterceptor extends ExceptionMapperInterceptor {
     /**
      * Nested key for HTTP error status.
      */
-    public static final String ERROR_STATUS_KEY = "httpStatus";
+    public static final String ERROR_HTTP_STATUS_KEY = "httpStatus";
+    public static final String ERROR_STATUS_KEY = "status";
 
     /**
      * Nested key for HTTP error message.
      */
-    public static final String ERROR_MESSAGE_KEY = "errorMessage";
+    public static final String ERROR_ERROR_MESSAGE_KEY = "errorMessage";
+    public static final String ERROR_MESSAGE_KEY = "message";
 
     /**
-     * Nested key for HTTP error details.
+     * Nested key for error details.
      */
     public static final String ERROR_DETAILS_KEY = "details";
 
@@ -49,20 +51,36 @@ public class EnvelopeErrorInterceptor extends ExceptionMapperInterceptor {
             if (responseEnvelope != null && responseEnvelope.containsKey(ERROR_KEY)) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> errorDetails = (Map<String, Object>) responseEnvelope.get(ERROR_KEY);
-                String status = errorDetails.get(ERROR_STATUS_KEY).toString();
-                String message = errorDetails.get(ERROR_MESSAGE_KEY).toString();
-                String details = errorDetails.get(ERROR_DETAILS_KEY).toString();
+                String status = find(errorDetails, ERROR_HTTP_STATUS_KEY, ERROR_STATUS_KEY);
+                String errorCode = find(errorDetails, ERROR_ERROR_MESSAGE_KEY, ERROR_MESSAGE_KEY);
+                String details = find(errorDetails, ERROR_DETAILS_KEY);
                 return new ErrorResponse(
                         Integer.parseInt(status),
-                        message,
+                        errorCode,
                         details).getError();
             } else {
-                LOG.warn("An error was found from a %s enabled response but did not contain an \"error\" property.",
+                LOG.warn("An error was found from a {} enabled response but did not contain an \"error\" property.",
                         EnvelopeJacksonProvider.HEADER_KEY);
                 return super.getErrorDetails(response);
             }
         } else {
             return super.getErrorDetails(response);
         }
+    }
+
+    /**
+     * Find any value from a list of possible keys or return null if none found.
+     *
+     * @param error The error map holding the error values
+     * @param keys The alternative keys to look for
+     * @return A string value for any of the matching keys
+     */
+    private String find(Map<String, Object> error, String... keys) {
+        for (String key : keys) {
+            if (error.containsKey(key)) {
+                return error.get(key).toString();
+            }
+        }
+        return null;
     }
 }
