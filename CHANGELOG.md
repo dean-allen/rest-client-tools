@@ -1,3 +1,9 @@
+1.1.3
+-----
+- Fixes log statement for OpowerClient#tokenTtlRefreshSeconds
+- Upgrades to rest-client-tools 1.2.0
+- Fixes EnvelopeJacksonProvider to be able to get an error from the envelope response
+
 1.1.2
 -----
 - upgrade to version 1.0.2 of metrics-providers. This fixes a busy-wait problem with the metrics publishing
