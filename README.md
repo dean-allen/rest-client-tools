@@ -1,5 +1,4 @@
-opower-rest-client-tools
-=================
+# opower-rest-client-tools
 
 [![Build Status](http://jenkins-dev.va.opower.it/job/opower-rest-client-tools/badge/icon)](http://jenkins-dev.va.opower.it/job/opower-rest-client-tools/)
 
@@ -8,22 +7,21 @@ Portions of rest-client-tools have been open sourced -- checkout the README [her
 This repository contains only the Opower specific extensions to rest-client-tools. 
 
 - integration with authorization-service
-- CuratorUriProvider for using our zookeeper service registration setup
-- Automatic metrics publishing to opentsdb
+- CuratorUriProvider for using our Zookeeper service registration setup
+- Automatic metrics publishing to OpenTSDB
 - JSON serialization pre configured with sane defaults
 - Default exception handling preconfigured
 
 More information can be found [here](https://wiki.opower.com/display/PD/Archmage+Client+Migration+Guide)
 
 
-@ResourceMetadata
------------------
+## @ResourceMetadata
+
 As of 1.1.0 all resource interfaces should be annotated with @ResourceMetadata. In archmage services, this is the interface in
 your <service>-interface project. This is an important change that makes consuming services even easier as now clients won't
 have to figure out which serviceName to use and won't have to worry about squelching warnings from resource interface validation.
 We have deprecated all the old constructors in OpowerClient.Builder that required you to pass in a serviceName. Now service writers
 should provide the serviceName via the @ResourceMetadata annotation on their resource interface. Here is an example:
-
 
     @ResourceMetadata(serviceName = "example", serviceVersion = 1, modelPackages = { "com.opower.example.model" })
     @Path("/foo")
@@ -35,8 +33,8 @@ should provide the serviceName via the @ResourceMetadata annotation on their res
 
 Note the modelPackages field is optional.
 
-UriProvider
------------
+## UriProvider
+
 To construct a client proxy you must provide a UriProvider. The UriProvider is responsible for providing the base url for each
 client request. In most cases using the SimpleUriProvider will be sufficient. In the case of archmage services, the SimpleUriProvider
 in conjunction with synapse-lite is the official way to configure your clients. Here is an example of how this is done:
@@ -52,8 +50,7 @@ There are 3 synapse-lite environments. Use these urls in the constructor of Simp
  * http://stage-synapse.va.opower.it:8999
  * http://prod-synapse.va.opower.it:8999
 
-Configuration Overview
-======================
+## Configuration Overview
 
 There are many different options for configuring your client instances. What follows is an overview of the various settings that are available to you. We have provided sensible defaults that should work in many cases. However you might have special settings needed for your particular client. Note that these builder methods should be invoked before calling build().
 
@@ -151,8 +148,7 @@ All method invocations on client proxies are wrapped with a HystrixCommand objec
             }
     });
 
-Use for X-OPOWER-JsonEnvelope Services
----------------------------------------
+## Use for X-OPOWER-JsonEnvelope Services
 
 If you need to use opower-rest-client-tools to interact with bertha, scrapi or any X-OPOWER-JsonEnvelope service you can configure you client like:
 
@@ -161,6 +157,34 @@ If you need to use opower-rest-client-tools to interact with bertha, scrapi or a
 This will set your Jackson processor and error interceptor to versions that expect to unwrap responses and errors. All other configuration
 options function normally.
 
-######Releasing new version
+## Metrics
+
+opower-rest-client-tools has the capability to collect and publish client side metrics. To do this, opower-rest-client-tools depends on our metrics abstraction library called metrics-provider. metrics-provider is an interface jar that detects an implementation jar at runtime using a java.util.ServiceLoader. The intent is that apps using different versions of codahale metrics or not using codahale metrics at all can plug in different implementation jars as needed. Currently codahale-3-metrics-provider is the only implementation. To enable collection of metrics and publishing to sensu, you must include codahale-3-metrics-provider version 1.0.2+ on your classpath.
+
+    <dependency>
+        <groupId>com.opower</groupId>
+        <artifactId>codahale-3-metrics-provider</artifactId>
+        <version>1.0.3</version>
+    </dependency>
+
+Client metric names are formatted as `service.client.[serviceName].[metricName]` with each metric being tagged with the `clientId`.
+
+If for some strange reason you want metrics collection and publishing to remain disabled, you can leave out the implementation jar from your classpath. If you would like to have metrics collected locally in your JVM and not published to sensu you can include the dependency on a metrics-provider implementation jar and disable the sensu publishing as shown below:
+
+    clientBuilder.disableSensuPublishing(); // perhaps you only need the metrics in the local jvm and not published in OpenTSDB
+
+### Filtering Metrics
+
+If you do not wish to send all metrics associated with the client they can be filtered out using a `Predicate<String>` to filter on the metric name.
+
+    clientBuilder.sensuPublishingFilter(new Predicate<String>() {
+        @Override
+        public boolean apply(String input) {
+            return input.contains("foobar");
+        }
+    });
+
+## Releasing a New Version
+
 1. Run the [Jenkins job](https://jenkins-dev.va.opower.it/job/rest-client-tools-release)
 2. Verify the version is [published](https://nexus.va.opower.it/nexus/content/groups/public/com/opower/opower-rest-client-builder)

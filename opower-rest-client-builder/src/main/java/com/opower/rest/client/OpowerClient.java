@@ -10,6 +10,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.netflix.hystrix.HystrixCircuitBreaker;
 import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
@@ -480,10 +481,10 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
 
     private void configureSensuPublishing() {
         if (this.sensuConfiguration.isPresent()) {
+            this.sensuConfiguration.get().addOpenTSDBTags(ImmutableMap.of("clientId", this.clientId));
             SensuConfiguration configToUse = new SensuConfiguration(this.sensuConfiguration.get());
             SENSU_PUBLISHER_FACTORY.getInstance(configToUse).startPublishingFor(this.metricsProvider.get(),
-                String.format("service.client.%s.%s", this.serviceName, this.clientId),
-                this.metricPublishingFilter);
+                String.format("service.client.%s", this.serviceName), this.metricPublishingFilter);
         }
     }
 
