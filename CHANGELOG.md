@@ -1,3 +1,7 @@
+1.1.4
+-----
+- Fixes client metrics, prefixing them with service.client.[serviceName].[metricName] and adding a tag with the `clientId`
+
 1.1.3
 -----
 - Fixes log statement for OpowerClient#tokenTtlRefreshSeconds
