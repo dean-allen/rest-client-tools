@@ -1,3 +1,7 @@
+1.1.5
+-----
+- Upgrades to rest-client-tools 1.2.1
+
 1.1.4
 -----
 - Fixes client metrics, prefixing them with service.client.[serviceName].[metricName] and adding a tag with the `clientId`
