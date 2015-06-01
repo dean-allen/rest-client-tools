@@ -15,6 +15,14 @@ public class IntParam extends AbstractParam<Integer> {
         super(input);
     }
 
+    /**
+     * Create an IntParam instance based on the given integer.
+     * @param value value represented by this instance
+     */
+    public IntParam(int value) {
+        super(value);
+    }
+
     @Override
     protected String errorMessage(String input, Exception e) {
         return '"' + input + "\" is not a number.";

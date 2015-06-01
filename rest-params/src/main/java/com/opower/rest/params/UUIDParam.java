@@ -18,6 +18,14 @@ public class UUIDParam extends AbstractParam<UUID> {
         super(input);
     }
 
+    /**
+     * Create an IntParam instance based on the given integer.
+     * @param value value represented by this instance
+     */
+    public UUIDParam(UUID value) {
+        super(value);
+    }
+
     @Override
     protected String errorMessage(String input, Exception e) {
         return '"' + input + "\" is not a UUID.";

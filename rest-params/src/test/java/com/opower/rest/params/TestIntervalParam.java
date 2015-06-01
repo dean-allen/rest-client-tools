@@ -41,7 +41,7 @@ public class TestIntervalParam {
     @Test
     public void testStringConstructorNullValue() {
         this.testRuleException.expect(WebApplicationException.class);
-        final IntervalParam retval = new IntervalParam(null);
+        final IntervalParam retval = new IntervalParam((String)null);
     }
 
     /**

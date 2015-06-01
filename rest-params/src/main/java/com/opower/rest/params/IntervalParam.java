@@ -18,6 +18,14 @@ public class IntervalParam extends AbstractParam<Interval> {
         super(input);
     }
 
+    /**
+     * Create an IntervalParam instance based on the given Interval.
+     * @param value value represented by this instance
+     */
+    public IntervalParam(Interval value) {
+        super(value);
+    }
+
     @Override
     protected Interval parse(String input) throws Exception {
         // Passing a null string to Interval#parse results in an Interval that

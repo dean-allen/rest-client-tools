@@ -1,6 +1,8 @@
 package com.opower.rest.test;
 
 import com.opower.rest.ResourceMetadata;
+import com.opower.rest.client.model.TestModelWithFields;
+
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -22,5 +24,15 @@ public interface ExampleResource {
      * @return string
      */
     @GET
+    @Path("unauthorizedOnEvenRequests")
     String unauthorizedOnEvenRequests();
+
+    /**
+     * Simply returns a populated TestModelWithFields instance.
+     *
+     * @return TestModelWithFields instance with values id:1 and name:"name"
+     */
+    @GET
+    @Path("testModelWithFields")
+    TestModelWithFields testModelWithFields();
 }

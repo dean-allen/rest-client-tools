@@ -18,6 +18,14 @@ public class DateTimeParam extends AbstractParam<DateTime> {
         super(input);
     }
 
+    /**
+     * Create an DateTimeParam instance based on the given DateTime.
+     * @param value value represented by this instance
+     */
+    public DateTimeParam(DateTime value) {
+        super(value.toDateTime(DateTimeZone.UTC));
+    }
+
     @Override
     protected DateTime parse(String input) throws Exception {
         return new DateTime(input, DateTimeZone.UTC);

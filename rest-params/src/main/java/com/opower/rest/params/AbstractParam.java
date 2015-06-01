@@ -29,6 +29,15 @@ public abstract class AbstractParam<T> {
     }
 
     /**
+     * Create a parameter directly from a valid value.
+     *
+     * @param input value represented by this instance
+     */
+    protected AbstractParam(T input) {
+        this.value = checkNotNull(input);
+    }
+
+    /**
      * Returns the media type of the error message entity.
      *
      * @return the media type of the error message entity

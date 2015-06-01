@@ -10,11 +10,29 @@ package com.opower.rest.params;
  */
 public class BooleanParam extends AbstractParam<Boolean> {
     /**
+     * BooleanParam representing the value 'true'.
+     */
+    public static final BooleanParam TRUE = new BooleanParam(true);
+
+    /**
+     * BooleanParam represeting the value 'false'.
+     */
+    public static final BooleanParam FALSE = new BooleanParam(false);
+
+    /**
      * Create a BooleanParam based on the provided string.
      * @param input the input string is case insensitive.
      */
     public BooleanParam(String input) {
         super(input);
+    }
+
+    /**
+     * Create a BooleanParam based on the provided boolean.
+     * @param value value represented by this instance
+     */
+    public BooleanParam(boolean value) {
+        super(value);
     }
 
     @Override

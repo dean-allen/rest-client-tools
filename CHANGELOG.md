@@ -1,3 +1,8 @@
+1.1.6
+-----
+- Fix to enable mixin annotations on a client's ObjectMapper (previously they were ignored)
+- Added alternate constructors to *Param classes to ease programmatic creation
+
 1.1.5
 -----
 - Upgrades to rest-client-tools 1.2.1

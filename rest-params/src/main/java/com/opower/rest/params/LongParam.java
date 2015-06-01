@@ -15,6 +15,14 @@ public class LongParam extends AbstractParam<Long> {
         super(input);
     }
 
+    /**
+     * Create an LongParam instance based on the given long.
+     * @param value value represented by this instance
+     */
+    public LongParam(long value) {
+        super(value);
+    }
+
     @Override
     protected String errorMessage(String input, Exception e) {
         return '"' + input + "\" is not a number.";

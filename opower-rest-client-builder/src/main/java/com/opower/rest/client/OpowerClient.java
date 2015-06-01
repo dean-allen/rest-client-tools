@@ -70,14 +70,13 @@ public abstract class OpowerClient<T, B extends OpowerClient<T, B>> extends Hyst
     private static final String VALID_CLIENT_NAME_PATTERN = "[a-zA-Z0-9\\-\\.]+";
     private static final MetricsProviderFactory METRICS_PROVIDER_FACTORY = FactoryLoaders.METRIC_PROVIDER.load();
     private static final SensuPublisherFactory SENSU_PUBLISHER_FACTORY = FactoryLoaders.SENSU_PUBLISHER.load();
-    private static final ObjectMapper DEFAULT_OBJECT_MAPPER = new ObjectMapper()
-            .registerModule(new GuavaModule())
-            .registerModule(new JodaModule())
-            .setDateFormat(new ISO8601DateFormat());
     private static final int DEFAULT_TOKEN_REFRESH_ATTEMPTS = 1;
     private static final int DEFAULT_TOKEN_REFRESH_ATTEMPT_INTERVAL = 100;
 
-    private final ObjectMapper objectMapper = DEFAULT_OBJECT_MAPPER.copy();
+    private ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new GuavaModule())
+            .registerModule(new JodaModule())
+            .setDateFormat(new ISO8601DateFormat());
     private JacksonJsonProvider jacksonJsonProvider = new JacksonJsonProvider(this.objectMapper)
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     private final String serviceName;

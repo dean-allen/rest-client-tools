@@ -1,5 +1,7 @@
 package com.opower.rest.test;
 
+import com.opower.rest.client.model.TestModelWithFields;
+
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
@@ -24,5 +26,10 @@ public class ExampleServerResource implements ExampleResource {
         }
 
         return "Hello world!";
+    }
+
+    @Override
+    public TestModelWithFields testModelWithFields() {
+        return new TestModelWithFields(1, "name");
     }
 }

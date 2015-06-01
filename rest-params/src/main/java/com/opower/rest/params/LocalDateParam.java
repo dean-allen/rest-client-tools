@@ -17,6 +17,14 @@ public class LocalDateParam extends AbstractParam<LocalDate> {
         super(input);
     }
 
+    /**
+     * Create an LocalDateParam instance based on the given LocalDate.
+     * @param value value represented by this instance
+     */
+    public LocalDateParam(LocalDate value) {
+        super(value);
+    }
+
     @Override
     protected LocalDate parse(String input) throws Exception {
         return new LocalDate(input);
